@@ -1,0 +1,253 @@
+1. Overview
+
+The goal of gitfs is to build a system with two properties: (1) The system
+is able to perform version control; (2) The system allows different users to
+share data.
+
+There are already many network file systems which could do (2). There are also
+many version control systems which help to do (1). What we need to do is not to
+reinvent those two techniques. Instead, we can build a file version management
+(FVM) tool which uses both techniques to achieve the goals.
+
+A FVM assumes an underlying shared file system (SFS) which allows multiple users
+to share their files in the same namespace, and a version control system (VCS)
+which allows a user to track the modifications and roll back at any time. It
+does not depend on which actual file system and version control system the user
+is using given those conditions satisfied.
+
+
+
+2. Design
+
+2.1 Shared File System
+The shared file system (SFS) provides one single important property: everyone
+who wants to share files has the same namespace. It could have a global
+namespace like [Mazieres99], or only a local namespace like in NFS, given that
+everyone wants to share files use the same NFS server.
+
+We assume that the SFS is a network file system. The server stores data and the
+client visits data. The server is accessible to all the data while the client
+has access restrictions. If the SFS is a local file system, we can just set the
+server and the client to be the same machine and the mechnisms still works.
+
+
+2.2 Version Control System
+
+A version control system has the ability to make snapshots and rollback at later
+time. We define the following concepts to avoid ambiguition later.
+
+TRACED FILES Trace files are the files that need to be version controlled.
+
+WORK DIR The work dir is the directory which contains all the traced files.
+
+COMMITMENT A commitment is a snapshot of traced files.
+
+CHECKOUT To checkout a commitment means to change the state of the work dir to
+        the snapshot of a commitment
+
+UPSTREAM The upstream is the current state of work dir.
+
+HEAD The HEAD is the most recent snapshot of traced files. The difference
+        between HEAD and UPSTREAM is that UPSTREAM contains the files without snapshot.
+
+BRANCH A branch is a list of commitments. The HEAD within a branch is called a
+        BRANCH HEAD.
+
+REPOSITORY A repository is a set of everything above.
+
+
+
+2.3 Single User Mode
+
+The single user mode is quite straight forward. The FVM just automatically make
+commits at time. When the user wants to rollback/make a branch, the FVM simply
+calls the corresponding command of the underlying VCS.
+
+Experiment result shows that it is very costly (in both space and time) to
+make a commit for every file change in the file system. There are two factors
+which affect the performance: (1) THe frequency of commitment; (2) The number of
+files in the commitment. We will discuss the two factors below.
+
+The automatical tracing might mess up with some of the VCS command and we will
+also discuss about them below.
+
+
+
+2.3.1 Frequency
+
+A working machine has thousands of "write" operation and hundreds of "close"
+operation during tasks like text editing. \hw{estimated value according to
+Slingshot experiment.} However, we don't need to make commitments that often in
+real life. We only need to make commitments much less frequently(e.g once per 10
+minutes). A user is often torable to a loss of 10 minutes, and it is much easier
+to find the correct commit to checkout if there is only one per 10 minutes
+rather than 100 per second.
+
+2.3.2 Tracing Level
+
+There would be no need to keep track of most temporary files, for example, web
+cache. Tracing level is used to specify which files and directories will be
+included in the repository automatically. Here are the choices of tracing levels:
+
+Full: Trace everything.
+Update: Only trace files and directories already existed in the repository.
+None: Trace nothing.
+
+The tracing level is only used for automatical tracing. The user could always
+manually add anything to the repository no matter what the tracing level is.
+
+Here is an example config for tracing levels. ##level(path)## defines the
+tracing level of all files and subdirectories in the specifed path.
+
+###############################
+# Start Tracing Level Settings
+level("/") = Update
+level("/home/") = All
+level("/home/.firefox/.cache") = None
+......
+# End Tracing Level Settings
+###############################
+
+2.3.3 Backtrace Mode
+
+The user could use backtrace mode to checkout a previous commitment. In the
+backtrace mode, the automatical commitment is turned off so that the previous
+commitment will not be messed up with the current upstream. Correspoding the
+regular mode is called the upstream mode. After the backtrace mode
+the user could choose one of the four operations:
+
+(1) ABADON the changes in the backtrace mode, return to the current HEAD.
+
+(2) REWRITE the current HEAD with changes in the backtrace mode.
+
+(3) MERGE the current HEAD with changes in the backtrace mode.
+
+(4) MAKE A BRANCH with changes in the backtrace mode.
+
+No matter which one is chosen, the current state returns to upstream mode and the
+automatical commitment is turned on again.
+
+
+
+2.4 Multi-User Mode (Sharing Mode)
+
+Given that the users do not share files (i.e. at most one user is accessible to
+each file), every user just needs to run the single-user mode FVM respectively.
+So problems only exist when the users need to share files.
+
+The SFS already has the ability to allow users to share the upstream files. So
+FVM only needs to allow the users to share the files in the previous commitment.
+The user could do this in virtual backtrace mode. We will explain them below.
+
+Since a user often does not have permissions to access the repository files of
+another user, the client side could not solve the sharing problem independently.
+As a result, we run a FVM daemon on the server side to help solve the sharing
+issue. In the following context, "FVM" refers to the client side, and "FVM
+daemon" refers to the server side.
+
+2.4.1 Virtual Backtrace Mode
+
+When a user (the observer) wants to checkout the previous commitment of another
+user (the owner), the observer could use "virtual checkout" and enter "virtual
+backtrace mode". The virtual backtrace mode is different from regular backtrace
+mode in two ways:
+
+(1) In regular backtrace mode, the upstream is concealed and the whole work dir
+returns to the commitment state. In virtual backtrace mode, the upstream is not
+affected, and the commitment snapshot goes to a user-specified location (usually
+an empty directory in the user's repository) called the virtual path.
+
+(2) In regular backtrace mode, the automatical tracing is suspended. In virtual
+backtrace mode, the automatical tracing is still running, except for the
+directory which contains the commitment snapshot.
+
+A typical command for a virtual checkout looks like:
+
+fvm virtual-checkout <repository> <commitment_id> <real_path> <virtual_path>
+
+FVM forwards the requent to the FVM daemon. The FVM daemon then calls the VCS
+with the repository, commitment and the real path to get the shared files in the
+commitment snapshot, and put them in the virtual path. \hw{The FVM daemon does
+not need to check permissions because the underlying SFS and VCS already
+maintains correct permissions for the checked-out files.}
+
+FVM then turns of tracing for the virtual path and the observer could do
+anything on that in the virtual backtrace mode. After the virtual backtrace mode
+the observer could choose:
+
+(1) ABANDON all the changes in the virtual path, return it to upstream. This is
+        often used when the observer only wants to take a glance of the files.
+
+(2) ADD the virtual path into the observer's own repository. In this way, the
+        relation of the virtual path and the real repository is cut off. This is
+        used when the observer wants some file from the owner but does not want
+        update information for that. For example, the observer wants to grab a
+        copy of a photograph the owner once downloaded and deleted.
+
+(3) OVERWRITE the upstream of the owner's repository. This is very dangerous
+    (the owner's repository will change silently) and is not recommended.
+
+(4) make a COMMITMENT to the owner repository. The request is sent to the FVM
+daemon. The FVM daemon then uses the change list and previous checkout
+information to create a commitment and put it into the owner's repository. This
+is often used when the observer and the owner are co-workers on the checked-out
+files.
+
+No matter which one the observer chooses, the virtual backtrace mode is off and
+the tracing is back to normal.
+
+
+
+2.5 Summary
+
+The following graph shows the relationship between everything.
+
+Figure 1 Summary of FVM
+
+           Client                                Server
+----------------------------------       ------------------------------
+|  ------------------            |       |   -------------            |
+|  |               -+------------+-------+---+->         |            |
+|  | FVM Multi-User |    ------- |       |   |  FVM      |            |
+|  | ----------     |    |  V  | |       |   |  Daemon   |            |
+|  | | FVM    |     |    |  C  | |       |   |   ^       |            |
+|  | | Single-+-----+--->|  S  | |       |   |   |       |            |
+|  | | User   |     |    |  |  | |       |   ----|--------            |
+|  | ----------     |    ---+--- |       |       |                    |
+|  ------------------       |    |       |       |                    |
+|                           |    |       |       |                    |
+|  -------------------------+--- |       |   ----+------------------  |
+|  |           SFS          V  | |       |   |   |    SFS          |  |
+|  |          Client          -+-+-----------+-> V   Server        |  |
+|  ----------------------------- |       |   -----------------------  |
+----------------------------------       ------------------------------
+
+
+
+
+References
+[Mazieres99] David Mazières, Michael Kaminsky, M. Frans Kaashoek, and Emmett Witchel.
+Separating key management from file system security. In Proceedings of the 17th
+ACM Symposium on Operating Systems Principles, pages 124-139, Kiawah Island, SC,
+1999. ACM.
+
+
+#######--------- Obsoleted Content --------
+2.4
+
+Although the users could share files, we need to ensure that each file belongs
+to at most one repository. Otherwise if someone wants to checkout previous
+commitment, the upstream of another user will be affected. We will explain
+solutions below.
+\hw{Usually the reason of such a conflict is a misconfiguration of tracing
+levels. If users does not manually trace any files, and any two users do not
+both have trace level "FULL" or "UPDATE" for any file, there should be no
+conflict.}
+
+2.4.1 Conflict Check
+
+On each commitment, the FVM sends a change list to the FVM daemon. The FVM
+daemon checks if any file in the change list is also contained in another
+repository. If so, the FVM daemon rejects the change and warns the user about
+it.
+
