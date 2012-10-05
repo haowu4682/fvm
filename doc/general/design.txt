@@ -108,13 +108,13 @@ level("/home/.firefox/.cache") = None
 # End Tracing Level Settings
 ###############################
 
-2.3.3 Backtrace Mode
+2.3.3 Full Backtrace Mode
 
-The user could use backtrace mode to checkout a previous commitment. In the
-backtrace mode, the automatical commitment is turned off so that the previous
-commitment will not be messed up with the current upstream. Correspoding the
-regular mode is called the upstream mode. After the backtrace mode
-the user could choose one of the four operations:
+The user could use full backtrace mode to checkout all the files from a
+previous commitment. In the full backtrace mode, the automatical commitment is
+turned off so that the previous commitment will not be messed up with the
+current upstream. Correspoding the regular mode is called the upstream mode.
+After the backtrace mode the user could choose one of the four operations:
 
 (1) ABADON the changes in the backtrace mode, return to the current HEAD.
 
@@ -127,6 +127,22 @@ the user could choose one of the four operations:
 No matter which one is chosen, the current state returns to upstream mode and the
 automatical commitment is turned on again.
 
+2.3.4 Partial Backtrace Mode
+
+The partial backtrace mode is used to checkout only several files in a previous
+commitment instead of the whole repository. In partial backtrace mode, only the
+files checked-out have their automatical commiment feature turned off.
+Everything else is the same with the regular backtrace mode.
+
+Since full backtrace mode is just a special case of partial backtrace mode
+where every file in the repository is checked-out. We can use partial backtrace
+mode solely and do not provide full backtrace mode. "Backtrace Mode" always
+means the partial backtrace mode thereafter.
+
+One implementation problem is that most VCS does not support the behavior of
+only checking out several files, and we might need to do some hacking to the VCS
+for that.
+
 
 
 2.4 Multi-User Mode (Sharing Mode)
@@ -135,17 +151,288 @@ Given that the users do not share files (i.e. at most one user is accessible to
 each file), every user just needs to run the single-user mode FVM respectively.
 So problems only exist when the users need to share files.
 
-The SFS already has the ability to allow users to share the upstream files. So
-FVM only needs to allow the users to share the files in the previous commitment.
-The user could do this in virtual backtrace mode. We will explain them below.
-
 Since a user often does not have permissions to access the repository files of
 another user, the client side could not solve the sharing problem independently.
 As a result, we run a FVM daemon on the server side to help solve the sharing
 issue. In the following context, "FVM" refers to the client side, and "FVM
 daemon" refers to the server side.
 
-2.4.1 Virtual Backtrace Mode
+2.4.1 Package
+
+In sharing mode, a user should be able to access multiple repositories. We use
+"package" as an abstraction for "multiple repositories". A package is a set of
+package items. A package item is a triple <repo, link_src, link_dst>, which are
+defined below:
+
+repo: The root of the repository the user wants to access.
+
+link_src: The relative path of the files the user wants to access from the root
+        of the repository.
+
+link_dst: The path that the user wants to store the files to be accessed (a.k.a
+        work directory)
+
+For example, </home/bob/bob.git, falcon/, /home/alice/bob-falcon> means that
+Alice wants to put the files in "falcon/" of the "/home/bob/bob.git" repository
+into her own package, at the place "/home/alice/bob-falcon". The effect is
+similar of running "ln /home/bob/falcon /home/alice/bob-falcon", but maintains
+the versioning information.
+
+A package item could also specify a user's own repository. For example,
+  </home/alice/alice.git, /, /home/alice> means that the repository
+  "/home/alice/alice.git" is put under "/home/alice", which is what the
+  single-user mode does.
+
+2.4.2 Package Organization
+
+Basically, every package item grows independently. FVM only records which
+package items are in a package, and use the VCS to remember those information.
+These information is used when the user wants to rollback in the backtrace mode
+(See 2.4.4). The information recorded looks like:
+
+++ Start ++
+</home/alice/alice.git, /, /home/alice>
+</home/bob/bob.git, falcon/, /home/alice/bob-falcon>
+++ End  ++
+
+There is an alternative design in 2.4.4 which records more information.
+
+2.4.3 FVM Daemon
+
+Since the user may not permission to access every file in another user's
+repository, he/she could not be allowed to access some VCS internal objects,
+which causes it impossible to checkout/make a commitment on the client side.
+
+The following example shows that why the user could not checkout a commitment.
+
++++ Example of Permission Problem +++
+
+Backgroud: Alice wants to share Bob's repository. The package item is
+    </home/bob/bob.git, falcon/, /home/alice/bob-falcon>. Alice wants to
+    checkout the commitment 1abcdef from the repository. The VCS is git. She has
+    no permission to view any files other than falcon/ in Bob's repository.
+
+How to checkout: Alice grabs the root tree object from the commitment object,
+    which looks like:
+file_name    type    object_name
+falcon       tree    4a5b6c7d
+zookeeper    tree    abcdef77
+My Photo     tree    12345677
+foo.txt      blob    76543210
+    She then grabs the object "falcon", and any sub-objects to achieve the files
+    in the commitment.
+
+Permission Problem: When alice grabs the root tree object, she knows not only
+the "falcon" object, but also other object like "foo.txt" which she has no
+permission to view.
+
++++ Example of Permission Problem Ends +++
+
+So we introduce the FVM daemon which resides on the server. It has the
+premission to every file on the server. It accepts the user's request, and only
+provide the information that user has permission to access to the user. Here are
+two basic functions:
+
+(1) When the user wants to checkout a commitment for a package item, the
+FVM daemon accepts the request and checks out the files using "link_src" and
+"repo" from the package item, and put them under the "link_dst".
+
+(2) When the user wants to make commitment for a package item, the
+FVM daemon accepts the request and make a commitment using the file changes the
+user provided.
+
+Note that if the user has full permission of a repository, the user could
+directly make commitments/checkout commitments to the repository without going
+through the FVM daemon. This saves some overhead talking to the FVM daemon.
+
+2.4.4 Package Backtrace Mode
+
+The user could rollback the package link status (the status of which package
+items exist in the package) using pakcage backtrace mode. FVM checks out
+the specified package organization information recorded in 2.4.2, and re-links
+every package item in those information. After that the user could use
+(repository's) backtrace mode to rollback any files in a certain repository.
+
+An alternative design is that FVM also records the HEAD of each package item.
+The information looks like:
+
+++ Start ++
+</home/alice/alice.git, /, /home/alice> HEAD=1abcdef
+</home/bob/bob.git, falcon/, /home/alice/bob-falcon> HEAD=1234567
+++ End  ++
+
+When the user rollback the package, the user also rolls back the version for
+each package item. (Like in the partial backtrace mode, the user could only roll
+back a selected set of files instead of whole repositories.) The rest is similar
+to the backtrace mode of a single repository.
+
+
+2.5 Summary
+
+The following graph shows the relationship between everything.
+
+Figure 1 Summary of FVM
+
+           Client                                Server
+----------------------------------       ------------------------------
+|  ------------------            |       |   -------------            |
+|  |               -+------------+-------+---+->         |            |
+|  | FVM Multi-User |    ------- |       |   |  FVM      |            |
+|  | ----------     |    |  V  | |       |   |  Daemon   |            |
+|  | | FVM    |     |    |  C  | |       |   |   ^       |            |
+|  | | Single-+-----+--->|  S  | |       |   |   |       |            |
+|  | | User   |     |    |  |  | |       |   ----|--------            |
+|  | ----------     |    ---+--- |       |       |                    |
+|  ------------------       |    |       |       |                    |
+|                           |    |       |       |                    |
+|  -------------------------+--- |       |   ----+------------------  |
+|  |           SFS          V  | |       |   |   |    SFS          |  |
+|  |          Client          -+-+-----------+-> V   Server        |  |
+|  ----------------------------- |       |   -----------------------  |
+----------------------------------       ------------------------------
+
+
+
+3. Challenges
+
+3.1 "When to remember"
+
+How often should FVM make a commitment? A trade-off exists here. Frequent
+commitment leaves more information for rollback in the future, but also
+increases resouces (CPU cycles, disk space, etc.) cost.
+
+There are several different policies for that. For example:
+
+(1) Make a commitment on every write()
+
+(2) Make a commitment on every close()
+
+(3) Make a commitment based on a fixed time interval
+
+Which one is the best policy?
+
+
+
+3.2 "What to remember"
+
+Apparently not all files in the file system needs to be traced. We use the trace
+level to specify different tracing policy, which is similar to what [Santry99]
+does.
+
+
+
+3.3 "How to organize files (to allow sharing)"
+
+Tradinitional versioning file systems (Copy-on-Write file systems) usually
+focus on the versioning of every single file. They do not consider the
+ralationship between different files. A VCS could trace a repository and retains
+every version of a repository, but does not allow the sharing between
+repositories. FVM proposes a loosely linked way called "package" to allow some
+kind of relationship between repositories. Is this the best to allow sharing?
+
+
+
+3.4 "How to forget"
+
+Assuming that the storage space does not increase, the whole storage will
+eventually be full when the system has no way to remove old versions. However,
+since the storage space every user could use increases during technical
+improvement of hardware techniques, it is not clear if the claim is still a
+problem. So there are 2 questions here:
+
+(1) Is it necessary (or worth doing) to forget some old versions to save some
+space?
+
+(2) If (1) is true, how can we do that?
+
+[Santry99] might be a good reference for the question.
+
+
+
+3.5 "What to rollback"
+
+The existance of versioning file systems shows that the user often wants to
+rollback one or several files instead of the whole file system, unless there is
+a huge problem like OS corruption which makes the user have to rollback the
+whole file system. For example, a user finds out a huge problem in the Falcon
+project and wants to rollback to the state one day ago, he does not want the
+family photos he updated during the day to disappear during the rollback.
+
+FVM creates a mechanism called "partial backtrace mode" to solve the problem. Is
+it the best way to do?
+
+
+3.6 "Which version to rollback"
+
+A user must decide which commitment to rollback before checking out a previous
+commitment. In most VCS system, the commitment message, manually typed in by the
+committers, helps the user to decide. However, if the commitments are generated
+by FVM automatically, how could the user find out that. Would "diff" help? How
+about the commitment time? Is there a heuristic way to generate some commitment
+message?
+
+This question is related to 3.4. Perhaps a good timing to forget a version is
+that the user has no way to distinguish between adjacent versions.
+
+
+3.7 "Permissions during sharing"
+
+When a user wants to share another user's file(s), he/she should not be able to
+access any files or get any information that he/she does not have the permission
+to access. As a result, the user should not be able to touch the VCS internal
+storage, which contains information of files that the user has no permission to
+access. However, several problem arises:
+
+(1) How could the user decide which version to rollback?
+
+(2) How could the user make commitments?
+
+(3) How could the user checkout previous version in backtrace mode?
+
+We use a FVM daemon running on the server to extract only the information that
+the user has the permission to access. However, this may have scalability
+problems. Is there any way to solely depend on the client side to solve the
+problem? This may require hacking to the VCS.
+
+
+
+References
+[Mazieres99] David Mazières, Michael Kaminsky, M. Frans Kaashoek, and Emmett Witchel.
+Separating key management from file system security. In Proceedings of the 17th
+ACM Symposium on Operating Systems Principles, pages 124-139, Kiawah Island, SC,
+1999. ACM.
+[Santry99] Deciding when to forget in the Elephant file system. SOSP 1999
+
+Possible Citaions:
+ext3cow (Copy-on-write versioning for ext3)
+btrfs
+ZFS
+
+
+#######--------- Obsoleted Content --------
+2.4
+
+Although the users could share files, we need to ensure that each file belongs
+to at most one repository. Otherwise if someone wants to checkout previous
+commitment, the upstream of another user will be affected. We will explain
+solutions below.
+\hw{Usually the reason of such a conflict is a misconfiguration of tracing
+levels. If users does not manually trace any files, and any two users do not
+both have trace level "FULL" or "UPDATE" for any file, there should be no
+conflict.}
+
+The SFS already has the ability to allow users to share the upstream files. So
+FVM only needs to allow the users to share the files in the previous commitment.
+The user could do this in virtual backtrace mode. We will explain them below.
+
+2.4.1 Conflict Check
+
+On each commitment, the FVM sends a change list to the FVM daemon. The FVM
+daemon checks if any file in the change list is also contained in another
+repository. If so, the FVM daemon rejects the change and warns the user about
+it.
+
+2.4.2 Virtual Backtrace Mode
 
 When a user (the observer) wants to checkout the previous commitment of another
 user (the owner), the observer could use "virtual checkout" and enter "virtual
@@ -195,59 +482,3 @@ files.
 
 No matter which one the observer chooses, the virtual backtrace mode is off and
 the tracing is back to normal.
-
-
-
-2.5 Summary
-
-The following graph shows the relationship between everything.
-
-Figure 1 Summary of FVM
-
-           Client                                Server
-----------------------------------       ------------------------------
-|  ------------------            |       |   -------------            |
-|  |               -+------------+-------+---+->         |            |
-|  | FVM Multi-User |    ------- |       |   |  FVM      |            |
-|  | ----------     |    |  V  | |       |   |  Daemon   |            |
-|  | | FVM    |     |    |  C  | |       |   |   ^       |            |
-|  | | Single-+-----+--->|  S  | |       |   |   |       |            |
-|  | | User   |     |    |  |  | |       |   ----|--------            |
-|  | ----------     |    ---+--- |       |       |                    |
-|  ------------------       |    |       |       |                    |
-|                           |    |       |       |                    |
-|  -------------------------+--- |       |   ----+------------------  |
-|  |           SFS          V  | |       |   |   |    SFS          |  |
-|  |          Client          -+-+-----------+-> V   Server        |  |
-|  ----------------------------- |       |   -----------------------  |
-----------------------------------       ------------------------------
-
-
-
-
-References
-[Mazieres99] David Mazières, Michael Kaminsky, M. Frans Kaashoek, and Emmett Witchel.
-Separating key management from file system security. In Proceedings of the 17th
-ACM Symposium on Operating Systems Principles, pages 124-139, Kiawah Island, SC,
-1999. ACM.
-
-
-#######--------- Obsoleted Content --------
-2.4
-
-Although the users could share files, we need to ensure that each file belongs
-to at most one repository. Otherwise if someone wants to checkout previous
-commitment, the upstream of another user will be affected. We will explain
-solutions below.
-\hw{Usually the reason of such a conflict is a misconfiguration of tracing
-levels. If users does not manually trace any files, and any two users do not
-both have trace level "FULL" or "UPDATE" for any file, there should be no
-conflict.}
-
-2.4.1 Conflict Check
-
-On each commitment, the FVM sends a change list to the FVM daemon. The FVM
-daemon checks if any file in the change list is also contained in another
-repository. If so, the FVM daemon rejects the change and warns the user about
-it.
-
