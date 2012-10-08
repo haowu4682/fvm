@@ -4,7 +4,7 @@
 #define SINGLE_VCS_VCS_H_
 
 // The interface
-class vcs {
+class VCS {
     public:
     // TODO implement
 }
