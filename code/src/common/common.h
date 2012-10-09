@@ -13,6 +13,12 @@
 // Constant definition
 #define kNanosecondsToSeconds 1e-9
 
+// Type definition
+#define Vector std::vector
+#define String std::string
+#define Set std::set
+#define Map std::map
+
 // Common macros
 #define EXEC_BLOCKED(path, args...) do {\
     pid_t pid; \
