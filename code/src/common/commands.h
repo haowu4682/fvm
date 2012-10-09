@@ -3,6 +3,10 @@
 #ifndef COMMON_COMMANDS_H_
 #define COMMON_COMMANDS_H_
 
+// Universal Commands
+// Display Help Information
+int cmd_help(int argc, char **argv);
+
 // Single User Mode Commands
 // Start tracing
 int cmd_repo_start(int argc, char **argv);
