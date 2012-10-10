@@ -12,6 +12,9 @@ COMMONOBJ       := $(patsubst $(SRCDIR)/common/%.cc, $(BINDIR)/common/%.o, $(COM
 SINGLEHDR       := $(wildcard $(SRCDIR)/single/*.h)
 SINGLESRC       := $(wildcard $(SRCDIR)/single/*.cc)
 SINGLEOBJ       := $(patsubst $(SRCDIR)/single/%.cc, $(BINDIR)/single/%.o, $(SINGLESRC))
+VCSHDR          := $(wildcard $(SRCDIR)/vcs/*.h)
+VCSSRC          := $(wildcard $(SRCDIR)/vcs/*.cc)
+VCSOBJ          := $(patsubst $(SRCDIR)/vcs/%.cc, $(BINDIR)/vcs/%.o, $(SINGLESRC))
 
 CC              := g++
 LD              := g++
@@ -24,12 +27,8 @@ all: fvm
 
 fvm: $(FVMBIN)
 
-$(FVMBIN): $(FVMOBJ) $(COMMONOBJ) $(SINGLEOBJ)
-	$(LD) $(LDFLAGS) $(FVMOBJ) $(SINGLEOBJ) $(COMMONOBJ) -o $(FVMBIN) $(LDADD)
-
-$(BINDIR)/%.o: $(SRCDIR)/%.cc $(FVMHDR) $(COMMONHDR)
-	mkdir -p $(BINDIR)
-	$(CC) $(CFLAGS) -o $@ -c $<
+$(FVMBIN): $(COMMONOBJ) $(SINGLEOBJ) $(VCSOBJ) $(FVMOBJ)
+	$(LD) $(LDFLAGS) $(SINGLEOBJ) $(COMMONOBJ) $(FVMOBJ) -o $(FVMBIN) $(LDADD)
 
 $(BINDIR)/common/%.o: $(SRCDIR)/common/%.cc $(COMMONHDR)
 	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/common
@@ -39,9 +38,17 @@ $(BINDIR)/single/%.o: $(SRCDIR)/single/%.cc $(SINGLEHDR) $(COMMONHDR)
 	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/single
 	$(CC) $(CFLAGS) -o $@ -c $<
 
+$(BINDIR)/vcs/%.o: $(SRCDIR)/vcs/%.cc $(SINGLEHDR) $(COMMONHDR)
+	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/vcs
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+$(BINDIR)/%.o: $(SRCDIR)/%.cc $(FVMHDR) $(COMMONHDR)
+	mkdir -p $(BINDIR)
+	$(CC) $(CFLAGS) -o $@ -c $<
+
 tags:
 	cd src; ctags -R --fields=+lS
 
 clean:
-	rm -f $(CLIENT_FUSEBIN) $(CLIENT_FUSEOBJ)
+	rm -f $(FVMBIN) $(FVMOBJ) $(COMMONOBJ) $(SINGLEOBJ) $(VCSOBJ)
 
