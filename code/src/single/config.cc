@@ -6,6 +6,7 @@
 RepoConfig::RepoConfig()
 {
     time_interval_s_ = kDefaultTimeInterval;
+    repo_path_ = ".";
 }
 
 // TODO: Implement reading config files

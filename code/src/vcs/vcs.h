@@ -1,12 +1,29 @@
 // The file describes the interface for a Version Control System (VCS)
 
-#ifndef SINGLE_VCS_VCS_H_
-#define SINGLE_VCS_VCS_H_
+#ifndef VCS_VCS_H_
+#define VCS_VCS_H_
 
-// The interface
-class VCS {
+#include <string>
+#include <vector>
+
+#include <common/common.h>
+
+// The Interface for a version control system
+class VersionControlSystem {
     public:
-    // TODO implement
-}
+        virtual ~VersionControlSystem() {}
 
-#endif // SINGLE_VCS_VCS_H_
+        // Get the change list for a specific repository
+        // Return the number of items to be included in the change list.
+        virtual int GetChangeList(const String& repo_pathname,
+                Vector<String>& change_list) = 0;
+
+        // Commit the change into a specific repository
+        // Return 0 if succeeded, -1 otherwise.
+        virtual int Commit(const String& repo_pathname,
+                const Vector<String>& change_list) = 0;
+
+};
+
+#endif // VCS_VCS_H_
+

@@ -7,6 +7,7 @@
 
 #include <common/common.h>
 #include <single/config.h>
+#include <vcs/vcs.h>
 
 class Tracer {
     public:
@@ -40,6 +41,9 @@ class Tracer {
         void Trace();
         // The friend function is used for pthread only
         friend void * trace_pthread_function(void * /* tracer_void_ptr */);
+
+        // The version control system
+        VersionControlSystem* vcs;
 };
 
 #endif // SINGLE_TRACER_H__

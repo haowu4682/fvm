@@ -5,12 +5,14 @@
 
 #include <common/common.h>
 #include <single/tracer.h>
+#include <vcs/gitvcs.h>
 
 Tracer* Tracer::current_tracer = NULL;
 
 Tracer::Tracer()
 {
     running_ = false;
+    vcs = new GitVCS();
 
     Init();
 }
@@ -46,7 +48,15 @@ void Tracer::Init()
 
 void Tracer::Trace()
 {
-    // TODO Implement
+    if (running_) {
+        // TODO trace
+        Vector<String> change_list;
+        if (vcs != NULL) {
+            vcs->GetChangeList(config_.repo_path(), change_list);
+        }
+    }
+
+    sleep(config_.time_interval_s());
 }
 
 int cmd_repo_start(Vector<String>& args)

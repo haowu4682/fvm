@@ -14,7 +14,7 @@ SINGLESRC       := $(wildcard $(SRCDIR)/single/*.cc)
 SINGLEOBJ       := $(patsubst $(SRCDIR)/single/%.cc, $(BINDIR)/single/%.o, $(SINGLESRC))
 VCSHDR          := $(wildcard $(SRCDIR)/vcs/*.h)
 VCSSRC          := $(wildcard $(SRCDIR)/vcs/*.cc)
-VCSOBJ          := $(patsubst $(SRCDIR)/vcs/%.cc, $(BINDIR)/vcs/%.o, $(SINGLESRC))
+VCSOBJ          := $(patsubst $(SRCDIR)/vcs/%.cc, $(BINDIR)/vcs/%.o, $(VCSSRC))
 
 CC              := g++
 LD              := g++
@@ -38,7 +38,7 @@ $(BINDIR)/single/%.o: $(SRCDIR)/single/%.cc $(SINGLEHDR) $(COMMONHDR)
 	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/single
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-$(BINDIR)/vcs/%.o: $(SRCDIR)/vcs/%.cc $(SINGLEHDR) $(COMMONHDR)
+$(BINDIR)/vcs/%.o: $(SRCDIR)/vcs/%.cc $(VCSHDR) $(COMMONHDR)
 	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/vcs
 	$(CC) $(CFLAGS) -o $@ -c $<
 
