@@ -28,7 +28,7 @@ all: fvm
 fvm: $(FVMBIN)
 
 $(FVMBIN): $(COMMONOBJ) $(SINGLEOBJ) $(VCSOBJ) $(FVMOBJ)
-	$(LD) $(LDFLAGS) $(SINGLEOBJ) $(COMMONOBJ) $(FVMOBJ) -o $(FVMBIN) $(LDADD)
+	$(LD) $(LDFLAGS) $(SINGLEOBJ) $(COMMONOBJ) $(VCSOBJ) $(FVMOBJ) -o $(FVMBIN) $(LDADD)
 
 $(BINDIR)/common/%.o: $(SRCDIR)/common/%.cc $(COMMONHDR)
 	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/common

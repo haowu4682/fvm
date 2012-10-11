@@ -22,8 +22,10 @@ class TraceLevelManager {
         // Get the tracelevel for a specific pathname
         TraceLevel GetTraceLevel(const String& pathname);
 
-    private:
+        // Add a trace level item to the manager
+        void AddTraceLevelItem(const String& pathname, TraceLevel level);
 
+    private:
 };
 
 // The config for FVM repository
@@ -44,6 +46,9 @@ class RepoConfig {
         TraceLevel GetTraceLevel(const String& pathname) {
             return trace_level_manager_.GetTraceLevel(pathname);
         }
+
+        // Read in a config string and turn it into attributes
+        void ReadFromString(const String& config_str);
 
     private:
         // The time interval for tracing in seconds

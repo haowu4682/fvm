@@ -49,10 +49,19 @@ void Tracer::Init()
 void Tracer::Trace()
 {
     if (running_) {
-        // TODO trace
         Vector<String> change_list;
+        Vector<String> commit_list;
         if (vcs != NULL) {
             vcs->GetChangeList(config_.repo_path(), change_list);
+
+            for (Vector<String>::iterator it = change_list.begin();
+                    it != change_list.end(); ++it) {
+                if (config_.GetTraceLevel(*it) != kNone) {
+                    commit_list.push_back(*it);
+                }
+            }
+
+            vcs->Commit(config_.repo_path(), commit_list);
         }
     }
 

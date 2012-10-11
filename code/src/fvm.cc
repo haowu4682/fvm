@@ -7,6 +7,7 @@
 
 #include <common/common.h>
 #include <common/commands.h>
+#include <common/util.h>
 
 void usage() {
     // TODO detail usage info
@@ -69,24 +70,6 @@ int handle_command(const Vector<String>& args)
     usage();
 
     return -1;
-}
-
-// Read a line and split it into string arrays
-std::istream& readline(std::istream& is, // the input stream for the command
-        Vector<String>& str_array) // the string array to store the result
-{
-    String line;
-    getline(is, line);
-
-    std::istringstream line_stream(line);
-    while (line_stream)
-    {
-        String str;
-        line_stream >> str;
-        str_array.push_back(str);
-    }
-
-    return is;
 }
 
 int main(int argc, char **argv)
