@@ -3,6 +3,7 @@
 #ifndef SINGLE_CONFIG_H_
 #define SINGLE_CONFIG_H_
 
+#include <map>
 #include <string>
 
 #include <common/common.h>
@@ -14,7 +15,6 @@ enum TraceLevel {
 };
 
 class TraceLevelManager {
-    // TODO: Implement
     public:
         // Constructors
         //TraceLevelManager();
@@ -26,6 +26,7 @@ class TraceLevelManager {
         void AddTraceLevelItem(const String& pathname, TraceLevel level);
 
     private:
+        Map<String, TraceLevel> trace_level_map_;
 };
 
 // The config for FVM repository
@@ -33,7 +34,6 @@ class RepoConfig {
     public:
         // Constructors
         RepoConfig();
-        // TODO Implement
         RepoConfig(const String& config_str);
 
         // Accesstors & Mutators

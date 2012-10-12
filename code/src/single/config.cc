@@ -25,13 +25,24 @@ RepoConfig::RepoConfig(const String& config_str)
 
 TraceLevel TraceLevelManager::GetTraceLevel(const String& pathname)
 {
-    // TODO Implement
-    return kNone;
+    String current_path;
+    TraceLevel current_level = kNone;
+
+    for (Map<String, TraceLevel>::iterator it = trace_level_map_.begin();
+            it != trace_level_map_.end(); ++it) {
+        if (IsPrefix(it->first, pathname) &&
+                !IsPrefix(it->first, current_path)) {
+            current_path = it->first;
+            current_level = it->second;
+        }
+    }
+
+    return current_level;
 }
 
 void TraceLevelManager::AddTraceLevelItem(const String& pathname, TraceLevel level)
 {
-    // TODO Implement
+    trace_level_map_[pathname] = level;
 }
 
 void RepoConfig::ReadFromString(const String& config_str)
