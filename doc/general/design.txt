@@ -102,7 +102,7 @@ tracing level of all files and subdirectories in the specifed path.
 ###############################
 # Start Tracing Level Settings
 level("/") = Update
-level("/home/") = All
+level("/home/") = Full
 level("/home/.firefox/.cache") = None
 ......
 # End Tracing Level Settings
@@ -110,11 +110,25 @@ level("/home/.firefox/.cache") = None
 
 2.3.3 Full Backtrace Mode
 
+Usually when a user is using the system, the changes made by the user are
+commited automatically (unless the user choose the trace level "None"). When the
+user checkouts a previous commitment, the work directory will contain the old
+versions of files instead of the most recent ones, and the automatical
+commitment will contain the old versions of files. Although sometimes this is a
+reasonable action, there are other cases when the user does not want this to
+happen. For example, the user might checkout a previous version in order to
+read the content, but do not want add the file into current upstream. As a
+result, we introduce (full) backtrace mode for the user to choose an action to
+the previous commitment, without modification to the upstream.
+
 The user could use full backtrace mode to checkout all the files from a
 previous commitment. In the full backtrace mode, the automatical commitment is
 turned off so that the previous commitment will not be messed up with the
 current upstream. Correspoding the regular mode is called the upstream mode.
 After the backtrace mode the user could choose one of the four operations:
+
+[MW: I don't really understand any of the text in the paragraph above.]
+[HW: A new paragraph added.]
 
 (1) ABADON the changes in the backtrace mode, return to the current HEAD.
 
@@ -172,6 +186,11 @@ link_src: The relative path of the files the user wants to access from the root
 link_dst: The path that the user wants to store the files to be accessed (a.k.a
         work directory)
 
+[MW: is what's happening below similar to a mount, as in Unix file
+systems?]
+[HW: I think it is more similar to "git clone"]
+
+
 For example, </home/bob/bob.git, falcon/, /home/alice/bob-falcon> means that
 Alice wants to put the files in "falcon/" of the "/home/bob/bob.git" repository
 into her own package, at the place "/home/alice/bob-falcon". The effect is
@@ -228,6 +247,10 @@ permission to view.
 
 +++ Example of Permission Problem Ends +++
 
+[MW: what's below is interesting. is one way of saying it that FVM
+proxies commits?]
+[HW: I think so.]
+
 So we introduce the FVM daemon which resides on the server. It has the
 premission to every file on the server. It accepts the user's request, and only
 provide the information that user has permission to access to the user. Here are
@@ -249,8 +272,11 @@ through the FVM daemon. This saves some overhead talking to the FVM daemon.
 
 The user could rollback the package link status (the status of which package
 items exist in the package) using pakcage backtrace mode. FVM checks out
-the specified package organization information recorded in 2.4.2, and re-links
-every package item in those information. After that the user could use
+the specified package organization information recorded in 2.4.2. For each
+package item in those information, FVM checks out the content of "link_src" in
+"repo" and store the content in "link_dst".
+[MW: please clarify the last sentence.]
+After that the user could use
 (repository's) backtrace mode to rollback any files in a certain repository.
 
 An alternative design is that FVM also records the HEAD of each package item.
@@ -311,6 +337,12 @@ There are several different policies for that. For example:
 
 Which one is the best policy?
 
+[MW: Could you apply an idea from Rethink the Sync (Nightingale et al.)?
+Essentially, store a commit only if the contents of that commit could be
+externally observed? (Maybe this doesn't make sense.)]
+[HW: I forgot what Rethink the Sync said. But every commit should be externally
+observed since a commit is a set of "file changes", and a user could definitely
+view a file change.]
 
 
 3.2 "What to remember"
@@ -350,6 +382,7 @@ space?
 
 
 3.5 "What to rollback"
+[MW: this challenge sounds interesting]
 
 The existance of versioning file systems shows that the user often wants to
 rollback one or several files instead of the whole file system, unless there is
@@ -364,6 +397,8 @@ it the best way to do?
 
 3.6 "Which version to rollback"
 
+[MW: this challenge sounds interesting]
+
 A user must decide which commitment to rollback before checking out a previous
 commitment. In most VCS system, the commitment message, manually typed in by the
 committers, helps the user to decide. However, if the commitments are generated
@@ -374,12 +409,14 @@ message?
 This question is related to 3.4. Perhaps a good timing to forget a version is
 that the user has no way to distinguish between adjacent versions.
 
+[MW: sentence above is interesting]
 
 3.7 "Permissions during sharing"
 
 When a user wants to share another user's file(s), he/she should not be able to
 access any files or get any information that he/she does not have the permission
-to access. As a result, the user should not be able to touch the VCS internal
+to access. [MW: what does previous sentence mean?]
+As a result, the user should not be able to touch the VCS internal
 storage, which contains information of files that the user has no permission to
 access. However, several problem arises:
 
