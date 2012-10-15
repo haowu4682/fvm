@@ -340,9 +340,9 @@ Which one is the best policy?
 [MW: Could you apply an idea from Rethink the Sync (Nightingale et al.)?
 Essentially, store a commit only if the contents of that commit could be
 externally observed? (Maybe this doesn't make sense.)]
-[HW: I forgot what Rethink the Sync said. But every commit should be externally
-observed since a commit is a set of "file changes", and a user could definitely
-view a file change.]
+[HW: Every commit "COULD" be externally observed (but the user could choose not
+to observe it), so it does not make sense. Rethink the Sync mainly talks about
+something different.]
 
 
 3.2 "What to remember"
