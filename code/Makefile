@@ -20,7 +20,7 @@ CC              := g++
 LD              := g++
 CFLAGS          := $(CFLAGS) -I$(SRCDIR)/ -g -D_FILE_OFFSET_BITS=64 -DDEBUG
 LDFLAGS         := $(LDFLAGS) -g
-LDADD           := -lrt
+LDADD           := -lrt -lgit2
 #LDADD           := -lrt -lssl -lssh2 -lgit2 -lfuse
 
 all: fvm

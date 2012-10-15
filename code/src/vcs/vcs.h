@@ -8,6 +8,14 @@
 
 #include <common/common.h>
 
+enum FileStatus {
+    kUnModified,
+    kModified,
+    kDeleted,
+    kNew,
+    kUntracked
+}
+
 // The Interface for a version control system
 class VersionControlSystem {
     public:
