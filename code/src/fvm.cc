@@ -37,10 +37,13 @@ struct cmd_t {
 };
 
 struct cmd_t fvm_commands[] = {
-    // Universal Commands
+    // Single user mode command
+    { "start", cmd_repo_start},
+    { "backtrace", cmd_repo_backtrace},
+
+    // Universal command
     { "help", cmd_help },
     { "exit", cmd_exit }
-//    {"start", cmd_repo_start},
 };
 
 // Handle a pre-defined command in commands.h
