@@ -68,7 +68,7 @@ void Tracer::Trace()
     sleep(config_.time_interval_s());
 }
 
-int cmd_repo_start(Vector<String>& args)
+int cmd_repo_start(const Vector<String>& args)
 {
     // Step 1: Read in config
     // TODO Read in config

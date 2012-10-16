@@ -3,6 +3,11 @@
 #ifndef SINGLE_BACKTRACE_H_
 #define SINGLE_BACKTRACE_H_
 
+#include <string>
+
+#include <common/common.h>
+#include <single/config.h>
+
 // The config for FVM repository
 class RepositoryBacktrace {
     public:

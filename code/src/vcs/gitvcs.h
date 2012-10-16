@@ -28,7 +28,7 @@ class GitVCS : public VersionControlSystem {
 
         // Checkout a commit
         virtual int Checkout(const String& repo_pathname,
-                const String& commit_id) = 0;
+                const String& commit_id);
 };
 
 #endif // VCS_GITVCS_H_

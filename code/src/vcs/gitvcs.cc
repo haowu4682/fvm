@@ -52,3 +52,11 @@ int GitVCS::Commit(const String& repo_pathname,
     return 0;
 }
 
+// Checkout a commit
+int GitVCS::Checkout(const String& repo_pathname,
+        const String& commit_id)
+{
+    // TODO Implement
+    return 0;
+}
+
