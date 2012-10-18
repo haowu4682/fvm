@@ -12,7 +12,8 @@
 class RepositoryBacktrace {
     public:
         // Constructors
-        //
+        RepositoryBacktrace();
+
         // Start the backtrace
         int Start();
         // Stop the backtrace
@@ -20,6 +21,9 @@ class RepositoryBacktrace {
     private:
         // The relative path for (partial) backtrace mode
         String path_;
+
+        // The old trace level for the path
+        TraceLevel old_trace_level_;
 
         // The config for the repository
         RepoConfig *config_;

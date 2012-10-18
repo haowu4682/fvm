@@ -21,6 +21,7 @@ class TraceLevelManager {
 
         // Get the tracelevel for a specific pathname
         TraceLevel GetTraceLevel(const String& pathname);
+        void SetTraceLevel(const String& pathname, TraceLevel value);
 
         // Add a trace level item to the manager
         void AddTraceLevelItem(const String& pathname, TraceLevel level);
@@ -45,6 +46,11 @@ class RepoConfig {
         // Return the tracelevel of a specific pathname
         TraceLevel GetTraceLevel(const String& pathname) {
             return trace_level_manager_.GetTraceLevel(pathname);
+        }
+
+        // Set the tracelevel for a specific path
+        void SetTraceLevel(const String& pathname, TraceLevel value) {
+            trace_level_manager_.AddTraceLevelItem(pathname, value);
         }
 
         // Read in a config string and turn it into attributes
