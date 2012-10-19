@@ -258,15 +258,32 @@ two basic functions:
 
 (1) When the user wants to checkout a commitment for a package item, the
 FVM daemon accepts the request and checks out the files using "link_src" and
-"repo" from the package item, and put them under the "link_dst".
+"repo" from the package item. This is called a "partial checkout".
 
 (2) When the user wants to make commitment for a package item, the
 FVM daemon accepts the request and make a commitment using the file changes the
-user provided.
+user provided. This is called a "partial commit".
 
 Note that if the user has full permission of a repository, the user could
 directly make commitments/checkout commitments to the repository without going
 through the FVM daemon. This saves some overhead talking to the FVM daemon.
+
+
+2.4.3.1 Partial Checkout
+
+The client sends the following request to the daemon
+
+PARTIAL_CHECKOUT REPOSITORY RELATIVE_PATH COMMIT_ID DESTINATION_PATH 
+
+Upon receiving the request, the daemon calls the VCS
+
+
+
+2.4.3.2 Partial Commit
+
+
+
+2.4.4 FVM Multi-User Mode
 
 2.4.4 Package Backtrace Mode
 
@@ -291,6 +308,7 @@ When the user rollback the package, the user also rolls back the version for
 each package item. (Like in the partial backtrace mode, the user could only roll
 back a selected set of files instead of whole repositories.) The rest is similar
 to the backtrace mode of a single repository.
+
 
 
 2.5 Summary
@@ -340,9 +358,6 @@ Which one is the best policy?
 [MW: Could you apply an idea from Rethink the Sync (Nightingale et al.)?
 Essentially, store a commit only if the contents of that commit could be
 externally observed? (Maybe this doesn't make sense.)]
-[HW: Every commit "COULD" be externally observed (but the user could choose not
-to observe it), so it does not make sense. Rethink the Sync mainly talks about
-something different.]
 
 
 3.2 "What to remember"
