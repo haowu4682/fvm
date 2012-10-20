@@ -165,25 +165,79 @@ Given that the users do not share files (i.e. at most one user is accessible to
 each file), every user just needs to run the single-user mode FVM respectively.
 So problems only exist when the users need to share files.
 
+Since we assume that there is already an underlying sharing file system, a
+user could already use the file system to access and modify files of another
+user using the underlying file system. We call the user who wants to share
+another user's files the **observer**, and the other party the **owner**.
+
+An observer could already share the owner's files using underlying file system,
+the only problem is that the observer does not have the shared files in a
+version controlled environment. The reason is, in a traditional sharing file
+system like NFS, both the observer and the owner access the *same copy* of each
+file. This kind of sharing leaves us 3 problems.
+
+First of all, the observer and the owner have different repositories, and the
+observer usually cannot access the owner's other files, vice versa. Given the
+situation, which repository should contain the shared files? If only the owner's
+repository owns the file, then the modification of the observer could not be
+correctly recorded.
+
+Secondly, the observer and the owner may want to perform different actions to
+the files. For example, the observer may need to check a previous commitment of
+a file, while the owner needs to modify the current copy of the file. If they
+share the same *copy* of the file, the two actions could not be performed
+concurrently.
+
+Lastly, if the observer and the owner modifies a file concurrently, it is very
+diffcult to clearly record their modification in the version history. In order to
+record it, the VCS probably needs to make a commitment on each write(), which is
+hardly doable.
+
+In order to avoid these synchronization problems, FVM allows the observer to
+have a different *copy* of the original files, which is similar to a "git
+clone". Such a copy looks like a submodule, but there are 2 differences: (1)
+Such a copy does not belong to the parent repository, it is an independent part;
+(2) Such a copy allows the observer to only have a part of the owner's
+repository, instead of the whole repository.
+
+An observer could share multiple files from different owners. We use the concept
+"package" for the whole set of all shared files, and "package item" as a
+directory or file in a specific repository. Details are in 2.4.1.
+
+The observer may need to keep track of all the shared files. 2.4.2 describes how
+to do that.
+
 Since a user often does not have permissions to access the repository files of
 another user, the client side could not solve the sharing problem independently.
 As a result, we run a FVM daemon on the server side to help solve the sharing
 issue. In the following context, "FVM" refers to the client side, and "FVM
-daemon" refers to the server side.
+daemon" refers to the server side. This will be talked in 2.4.3.
+
+2.4.4 describes how to manipulate the version control of a package item. It is
+similar to the single user mode, except for that it uses the FVM daemon to
+perform some actions.
+
+2.4.5 describes how to manipulate the version control of the whole package.
+In normal execution, each package item maintains its own automatical
+commitments, and there is nothing left to do. The only question is how to
+checkout a previous state for the whole package, and 2.4.5 will describe that.
+
+
 
 2.4.1 Package
 
-In sharing mode, a user should be able to access multiple repositories. We use
+In sharing mode, an observer should be able to access multiple repositories. We use
 "package" as an abstraction for "multiple repositories". A package is a set of
-package items. A package item is a triple <repo, link_src, link_dst>, which are
+package items. A package item refers to a directory or file in a repository.
+In detail, a package item is a triple <repo, link_src, link_dst>, which are
 defined below:
 
-repo: The root of the repository the user wants to access.
+repo: The root of the repository the observer wants to access.
 
-link_src: The relative path of the files the user wants to access from the root
+link_src: The relative path of the files the observer wants to access from the root
         of the repository.
 
-link_dst: The path that the user wants to store the files to be accessed (a.k.a
+link_dst: The path that the observer wants to store the files to be accessed (a.k.a
         work directory)
 
 [MW: is what's happening below similar to a mount, as in Unix file
@@ -214,7 +268,7 @@ These information is used when the user wants to rollback in the backtrace mode
 </home/bob/bob.git, falcon/, /home/alice/bob-falcon>
 ++ End  ++
 
-There is an alternative design in 2.4.4 which records more information.
+There is an alternative design in 2.4.5 which records more information.
 
 2.4.3 FVM Daemon
 
@@ -275,17 +329,118 @@ The client sends the following request to the daemon
 
 PARTIAL_CHECKOUT REPOSITORY RELATIVE_PATH COMMIT_ID DESTINATION_PATH 
 
-Upon receiving the request, the daemon calls the VCS
+Upon receiving the request, the daemon calls the VCS to retrieve the files and
+store them in <DESTINATION_PATH>. The following example shows how to do that
+when we use git as the VCS.
+
++++++++ Partial Checkout Example +++++++
+
+Request: PARTIAL_CHECKOUT /home/bob/.git /project/ 0x1abcdef2345 /home/alice/bob-project
+
+Daemon's work for the request:
+(1) Find the repository in /home/bob/.git
+(2) Find the commitment object with id 0x1abcdef2345
+(3) Find the object in "/project". For example, if the root object for
+    0x1abcdef2345 is:
+    ++++++++++++++++++++++++++++
+    name type hash_id
+    project tree 987654321abcdef
+    Document tree aaaaaaaaaaaaa
+    foo.txt blob bbbbbbbbbbbbb
+    ++++++++++++++++++++++++++++
+    Then "987654321abcdef" is the object we are looking for.
+(4) Recursively copy "987654321abcdef" and its children objects to
+    /home/alice/bob-project. The daemon could check if the destination file has
+    been modified to avoid some work.
+
++++++++ Partial Checkout Example Ends +++++++
 
 
 
 2.4.3.2 Partial Commit
 
+The client sends the following request to the daemon
+
+PARTIAL_COMMIT REPOSITORY RELATIVE_PATH OLD_COMMIT_ID SOURCE_PATH
+
+This is basically the reverse version of partial checkout. The daemon calls the
+VCS to inform them about the files in <SOURCE_PATH>, the VCS then combine these
+files and original files in OLD_COMMIT_ID to create a new commit with
+NEW_COMMIT_ID. The daemon then return the NEW_COMMIT_ID to the client. The
+following example shows how to do that with git.
+
++++++++ Partial Commit Example +++++++
+
+Request: PARTIAL_COMMIT /home/bob/.git /project/ 0x1abcdef2345 /home/alice/bob-project
+
+Daemon's work for the request:
+(1) Find the repository in /home/bob/.git
+(2) Create objects for files and directories in /home/alice/bob-project. The
+    daemon could use old objects if a file has not changed. Say the object id of
+    the root is "54321fedcba9876"
+(3) Find the commitment object with id 0x1abcdef2345
+(4) Find the object in "/project". For example, if the root object for
+    0x1abcdef2345 is:
+    ++++++++++++++++++++++++++++
+    name type hash_id
+    project tree 987654321abcdef
+    Document tree aaaaaaaaaaaaa
+    foo.txt blob bbbbbbbbbbbbb
+    ++++++++++++++++++++++++++++
+(5) Replace the hash_id 987654321abcdef with the new value "54321fedcba9876",
+    and create a new object for that. Create a new commit object for the new
+    root object. Replace the HEAD with the new commit object.
+(6) Return the id of the new commit object to the client.
+
+++++++ Partial Commit Example Ends ++++++
 
 
 2.4.4 FVM Multi-User Mode
 
-2.4.4 Package Backtrace Mode
+When the observer wants to share files from the owner, the observer first
+creates a package item <repo, link_src, link_dst> for the request, and **links**
+it. After that, FVM will automatically commit changes to the repository similar
+to the single user mode. If the observer wants to checkout a previous commitment,
+FVM will use backtrace mode, similar to the single user mode. If the observer
+does not want to see the files again, he **unlinks** the package item.
+
+2.4.4.1 Linking
+
+To link a package item is quite straight forward: perfrom a "PARTIAL_CHECKOUT repo
+link_src HEAD link_dst". After that, the directory "link_dst" already has the
+most recent content of "link_src", and FVM only needs to turn on automatical
+commitment for the cloned files.
+
+To unlink a package item is even simpler: simply remove all the files in
+link_dst and stop automatical commitment.
+
+2.4.4.2 Normal Execution
+
+During normal execution, FVM performs automatical commitments just as in 2.3.1 -
+2.3.2. However, different users might need to modify a repository concurrently
+in sharing mode, so we need to do a few things to maintain the repository. Also
+if two users makes commitments to the same file concurrently, there will
+probably be a conflict. The user might need to solve it manually.
+
+When FVM performs an automatical commitment, it first checks if the current HEAD
+in link_src is the same with that in link_dst. If they are the same, FVM simply
+makes a partial commit "PARTIAL_COMMIT repo link_src HEAD link_dst".
+
+If the two HEADs are not the same, call them SRC_HEAD and DST_HEAD respectively.
+FVM first backup ("git stash") all the changes in link_dst. After that it
+performs "PARTIAL_CHECKOUT repo link_src SRC_HEAD link_dst" to achieve the HEAD
+from the original source, and then recover all the backup'ed changes ("git stash
+pop"). In this process FVM might need the user to solve conflicts. After that
+FVM makes a partial commit "PARTIAL_COMMIT repo link_src HEAD link_dst".
+
+2.4.4.3 Backtrace Mode
+
+The backtrace mode is also the same as 2.3.4. The only difference is that FVM
+uses "partial checkout" and "partial commit" through FVM daemon instead of
+regular ones in underlying VCS.
+
+
+2.4.5 Package Backtrace Mode
 
 The user could rollback the package link status (the status of which package
 items exist in the package) using pakcage backtrace mode. FVM checks out
@@ -446,6 +601,13 @@ the user has the permission to access. However, this may have scalability
 problems. Is there any way to solely depend on the client side to solve the
 problem? This may require hacking to the VCS.
 
+3.8 Synchronization while sharing
+
+When two users share files, they might need to modify a file concurrently. This
+behavior causes conflicts in a repository.
+
+There is no good way to solve it right now. The user might need to solve the
+conflict manually.
 
 
 References
