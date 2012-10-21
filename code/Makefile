@@ -2,6 +2,7 @@ SRCDIR          := src
 BINDIR          := bin
 
 FVMBIN          := $(BINDIR)/fvm
+DAEMONBIN       := $(BINDIR)/fvm-daemon
 
 FVMHDR          := $(wildcard $(SRCDIR)/*.h)
 FVMSRC          := $(wildcard $(SRCDIR)/*.cc)
@@ -15,6 +16,9 @@ SINGLEOBJ       := $(patsubst $(SRCDIR)/single/%.cc, $(BINDIR)/single/%.o, $(SIN
 VCSHDR          := $(wildcard $(SRCDIR)/vcs/*.h)
 VCSSRC          := $(wildcard $(SRCDIR)/vcs/*.cc)
 VCSOBJ          := $(patsubst $(SRCDIR)/vcs/%.cc, $(BINDIR)/vcs/%.o, $(VCSSRC))
+DAEMONHDR       := $(wildcard $(SRCDIR)/daemon/*.h)
+DAEMONSRC       := $(wildcard $(SRCDIR)/daemon/*.cc)
+DAEMONOBJ       := $(patsubst $(SRCDIR)/daemon/%.cc, $(BINDIR)/daemon/%.o, $(DAEMONSRC))
 
 CC              := g++
 LD              := g++
@@ -25,16 +29,24 @@ LDADD           := -lrt -lgit2
 
 all: fvm
 
-fvm: $(FVMBIN)
+fvm: $(FVMBIN) $(DAEMONBIN)
+
+$(DAEMONBIN): $(DAEMONOBJ)
+	$(LD) $(LDFLAGS) $(DAEMONOBJ) -o $(DAEMONBIN) $(LDADD)
 
 $(FVMBIN): $(COMMONOBJ) $(SINGLEOBJ) $(VCSOBJ) $(FVMOBJ)
 	$(LD) $(LDFLAGS) $(SINGLEOBJ) $(COMMONOBJ) $(VCSOBJ) $(FVMOBJ) -o $(FVMBIN) $(LDADD)
+
+$(BINDIR)/daemon/%.o: $(SRCDIR)/daemon/%.cc $(COMMONHDR) $(VCSHDR)
+	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/daemon
+	$(CC) $(CFLAGS) -o $@ -c $<
+
 
 $(BINDIR)/common/%.o: $(SRCDIR)/common/%.cc $(COMMONHDR)
 	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/common
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-$(BINDIR)/single/%.o: $(SRCDIR)/single/%.cc $(SINGLEHDR) $(COMMONHDR)
+$(BINDIR)/single/%.o: $(SRCDIR)/single/%.cc $(SINGLEHDR) $(COMMONHDR) $(VCSHDR)
 	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/single
 	$(CC) $(CFLAGS) -o $@ -c $<
 
