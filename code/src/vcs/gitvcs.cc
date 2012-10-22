@@ -1,8 +1,12 @@
 // The implementation for git api as VCS
 //
 
+#include <fstream>
 #include <git2.h>
+#include <iostream>
+#include <sstream>
 #include <string>
+#include <sys/stat.h>
 #include <vector>
 
 #include <common/common.h>
@@ -101,6 +105,102 @@ int GitTreeSearch(git_object **relative_object,
     return 0;
 }
 
+int GitBlobWrite(git_repository *repo, git_blob *blob, const String& destination)
+{
+    const void *buf = git_blob_rawcontent(blob);
+    size_t size = git_blob_rawsize(blob);
+
+    std::ofstream fout(destination.c_str());
+    fout.write((char *)buf, size);
+    fout.close();
+
+    return 0;
+}
+
+struct GitTreeWriteCallbackPayload {
+    git_repository *repo;
+    const String *destination;
+};
+
+int GitTreeWriteCallback(const char *root,
+        git_tree_entry *entry,
+        void *payload)
+{
+    int rc;
+    GitTreeWriteCallbackPayload *data =
+        static_cast<GitTreeWriteCallbackPayload *> (payload);
+    std::ostringstream file_name_stream;
+    file_name_stream << *data->destination << "/" << root;
+    file_name_stream << "/" << git_tree_entry_name(entry);
+    String file_name = file_name_stream.str();
+
+    git_otype entry_type = git_tree_entry_type(entry);
+    const git_oid *entry_oid;
+    git_blob *entry_blob;
+
+    switch (entry_type) {
+        case GIT_OBJ_TREE:
+            // XXX: Use actual file mode!
+            mkdir(file_name.c_str(), 0755);
+            break;
+
+        case GIT_OBJ_BLOB:
+            entry_oid = git_tree_entry_id(entry);
+            rc = git_blob_lookup(&entry_blob, data->repo, entry_oid);
+            if (rc < 0) {
+                LOG("Error in git data structure: blob is not found.");
+            }
+            GitBlobWrite(data->repo, entry_blob, file_name);
+            break;
+
+        default:
+            LOG("Unknown type: %d", entry_type);
+    }
+}
+
+int GitTreeWrite(git_repository *repo, git_tree *tree, const String& destination)
+{
+    int rc;
+
+    struct GitTreeWriteCallbackPayload data;
+    data.repo = repo;
+    data.destination = &destination;
+    rc = git_tree_walk(tree, GitTreeWriteCallback, GIT_TREEWALK_PRE, &data);
+    if (rc < 0) {
+        LOG("Cannot write the files into destination.");
+        return rc;
+    }
+
+    return 0;
+}
+
+int GitObjectWrite(git_repository *repo, git_object *root, const String& destination)
+{
+    git_otype root_type = git_object_type(root);
+    const git_oid *root_oid;
+    git_blob *root_blob;
+    git_tree *root_tree;
+    int rc;
+
+    switch (root_type) {
+        case GIT_OBJ_TREE:
+            break;
+
+        case GIT_OBJ_BLOB:
+            root_oid = git_object_id(root);
+            rc = git_blob_lookup(&root_blob, repo, root_oid);
+            if (rc < 0) {
+                LOG("Error in git data structure: blob is not found.");
+            }
+            GitBlobWrite(repo, root_blob, destination);
+            break;
+
+        default:
+            LOG("Unexpected type %d, skipped.", root_type);
+    }
+    return 0;
+}
+
 // Checkout a commit
 int GitVCS::Checkout(const String& repo_pathname,
         const String& commit_id,
@@ -112,7 +212,7 @@ int GitVCS::Checkout(const String& repo_pathname,
     git_oid commit_oid;
     git_commit *commit;
     git_tree *commit_tree;
-    git_object*relative_root;
+    git_object *relative_root;
 
     // Step 1: Open repository
     //
@@ -160,6 +260,11 @@ int GitVCS::Checkout(const String& repo_pathname,
     }
 
     // Step 5: Overwrite files in destination
+    rc = GitObjectWrite(repo, relative_root, destination_path);
+    if (rc < 0) {
+        LOG("Failure: Cannot write into %s", destination_path.c_str());
+        return rc;
+    }
 
     return 0;
 }
