@@ -4,6 +4,36 @@
 
 #include <common/util.h>
 
+// Split a string
+// Returns: the number of substrings
+int split(const String& str, // The source string
+        const String& delimeters, // The delimeters
+        Vector<String>& str_array) // Output
+{
+    int start_index = 0, end_index = 0;
+    int count = 0;
+
+    if (str.empty()) {
+        return 0;
+    }
+
+    end_index = str.find_first_of(delimeters, start_index);
+
+    while (end_index != String::npos) {
+        str_array.push_back(str.substr(start_index, end_index - start_index));
+        ++count;
+        start_index = end_index + 1;
+        end_index = str.find_first_of(delimeters, start_index);
+    }
+
+    if (start_index < str.size()) {
+        str_array.push_back(str.substr(start_index));
+        ++count;
+    }
+
+    return count;
+}
+
 // Read a line and split it into string arrays
 std::istream& readline(std::istream& is, // the input stream for the command
         Vector<String>& str_array) // the string array to store the result

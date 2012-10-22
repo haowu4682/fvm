@@ -33,7 +33,9 @@ class VersionControlSystem {
 
         // Checkout a commit
         virtual int Checkout(const String& repo_pathname,
-                const String& commit_id) = 0;
+            const String& commit_id,
+            const String& relative_path,
+            const String& destination_path) = 0;
 };
 
 #endif // VCS_VCS_H_
