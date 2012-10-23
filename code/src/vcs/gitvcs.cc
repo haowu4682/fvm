@@ -48,15 +48,6 @@ int GitVCS::GetChangeList(const String& repo_pathname,
     return 0;
 }
 
-// Commit the change into a specific repository
-// Return 0 if succeeded, -1 otherwise.
-int GitVCS::Commit(const String& repo_pathname,
-        const Vector<String>& change_list)
-{
-    // TODO Implement
-    return 0;
-}
-
 int GitTreeSearch(git_object **relative_object,
             git_repository *repo,
             git_tree *root_tree,
@@ -266,6 +257,24 @@ int GitVCS::Checkout(const String& repo_pathname,
         return rc;
     }
 
+    return 0;
+}
+
+// Commit the change into a specific repository
+// Return 0 if succeeded, -1 otherwise.
+int GitVCS::Commit(const String& repo_pathname,
+        const Vector<String>& change_list)
+{
+    // TODO Implement
+    return 0;
+}
+
+// Commit the change into a specific repository, using the old commit id as the
+// base.
+int PartialCommit(const String& repo_pathname,
+        const Vector<String>& change_list,
+        const String& old_commit_id)
+{
     return 0;
 }
 
