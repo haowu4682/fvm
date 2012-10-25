@@ -50,6 +50,7 @@ int GitVCS::GetChangeList(const String& repo_pathname,
 }
 
 int GitTreeSearch(git_object **relative_object,
+            Vector<git_tree *> *tree_link_path,
             git_repository *repo,
             git_tree *root_tree,
             const String& relative_path)
@@ -63,6 +64,9 @@ int GitTreeSearch(git_object **relative_object,
     git_object *current_object;
 
     for (int i = 0; i < relative_path_splitted.size(); ++i) {
+        if (tree_link_path != NULL) {
+            tree_link_path->push_back(current_tree);
+        }
         // Step 1: Find the tree entry
         tree_entry = git_tree_entry_byname(current_tree, relative_path_splitted[i].c_str());
         if (tree_entry == NULL) {
@@ -193,35 +197,121 @@ int GitObjectWrite(git_repository *repo, git_object *root, const String& destina
     return 0;
 }
 
-int CreateTreeRecursive(git_tree **tree,
+int CombineObject(git_tree **new_root_tree,
+        git_repository *repo,
+        git_tree *root_tree,
+        git_oid combine_object_oid,
+        const String& combine_point)
+{
+    int rc;
+    git_object *old_combine_object;
+    Vector<git_tree *> tree_link_path;
+
+    // Divide the combine point
+    Vector<String> combine_point_list;
+    split(combine_point, "/", combine_point_list);
+
+    // Search for the combine point in the root tree
+    rc = GitTreeSearch(&old_combine_object, &tree_link_path, repo, root_tree,
+            combine_point);
+    if (rc < 0) {
+        LOG("The combine point %s does not exist.", combine_point.c_str());
+        return rc;
+    }
+
+    // Recursively modify the tree, up till the root
+    git_oid current_new_oid;
+    git_tree *current_parent_tree;
+    git_treebuilder *tree_builder;
+    current_new_oid = combine_object_oid;
+
+    for (Vector<git_tree *>::reverse_iterator tree_link_path_ptr = tree_link_path.rbegin();
+            tree_link_path_ptr != tree_link_path.rend(); ++tree_link_path_ptr) {
+        current_parent_tree = *tree_link_path_ptr;
+
+        git_treebuilder_create(&tree_builder, current_parent_tree);
+
+        // TODO
+
+        git_treebuilder_free(tree_builder);
+    }
+
+    return 0;
+}
+
+int CreateObjectRecursive(git_oid *source_oid,
+        mode_t *source_mode,
         git_repository *repo,
         const String& source_path)
 {
-    DIR *directory = opendir(source_path.c_str());
-    struct dirent *directory_entry;
-    if (directory == NULL) {
-        LOG("Cannot open dir: %s", source_path.c_str());
-        return -1;
+    int rc;
+
+    git_oid child_oid;
+    struct stat source_stat;
+
+    stat(source_path.c_str(), &source_stat);
+    if (source_mode != NULL) {
+        *source_mode = source_stat.st_mode;
     }
 
-    while ((directory_entry = readdir(directory)) != NULL) {
-#ifdef _DIRENT_HAVE_D_TYPE
-        switch (directory_entry->d_type) {
-            case DT_DIR:
-                break;
-            case DT_REG:
-                break;
-            default:
-                // TODO Support symbolic link.
-                LOG("We do not support the file type %d yet.", directory_entry->d_type);
-        };
-#else
-        LOG("The file system does not support DIRENT_TYPE. We cannot continue.");
-        return -1;
-#endif
-    }
+    if (S_ISREG(source_stat.st_mode)) {
 
-    closedir(directory);
+        // Create a blob for the file
+        rc = git_blob_create_fromdisk(source_oid, repo, source_path.c_str());
+        if (rc < 0) {
+            LOG("Cannot create a blob for file: %s", source_path.c_str());
+            return -1;
+        }
+
+    } else if (S_ISDIR(source_stat.st_mode)) {
+        DIR *directory = opendir(source_path.c_str());
+        struct dirent *directory_entry;
+
+        if (directory == NULL) {
+            LOG("Cannot open dir: %s", source_path.c_str());
+            return -1;
+        }
+
+        // Create a tree builder for the directory
+        git_treebuilder *tree_builder;
+        git_treebuilder_create(&tree_builder, NULL);
+
+        while ((directory_entry = readdir(directory)) != NULL) {
+            // Create an object for every child
+            String child_absolute_path = source_path + '/' + directory_entry->d_name;
+            mode_t child_mode;
+
+            rc = CreateObjectRecursive(&child_oid, &child_mode, repo,
+                    child_absolute_path.c_str());
+            if (rc < 0) {
+                return rc;
+            }
+
+            // Add the child into the tree builder
+            // XXX Do not add the unsupported files
+            rc = git_treebuilder_insert(NULL, tree_builder,
+                    directory_entry->d_name, &child_oid, child_mode);
+            if (rc < 0) {
+                LOG("Cannot insert object into tree builder for file: %s", child_absolute_path.c_str());
+                return -1;
+            }
+        }
+
+        // Write out the tree
+        rc = git_treebuilder_write(source_oid, repo, tree_builder);
+        if (rc < 0) {
+            LOG("Failed to write the tree to the repository.");
+            return rc;
+        }
+
+        // Free out the internal data
+        git_treebuilder_free(tree_builder);
+        closedir(directory);
+
+    } else {
+        // TODO Support symbolic link.
+        LOG("We do not support the file type for file: %s.", source_path.c_str());
+    }
 
     return 0;
 }
@@ -277,7 +367,7 @@ int GitVCS::Checkout(const String& repo_pathname,
         return rc;
     }
 
-    rc = GitTreeSearch(&relative_root, repo,
+    rc = GitTreeSearch(&relative_root, NULL, repo,
             commit_tree, relative_path);
     if (rc < 0) {
         LOG("Failure: Path %s does not exist.", relative_path.c_str());
@@ -306,10 +396,12 @@ int GitVCS::Commit(const String& repo_pathname,
 // base.
 int PartialCommit(const String& repo_pathname,
         const Vector<String>& change_list,
-        const String& old_commit_id)
+        const String& old_commit_id,
+        const String& work_dir)
 {
     int rc;
     git_repository *repo;
+    git_oid root_oid, partial_oid;
 
     // Step 1: Open repository
     rc = git_repository_open(&repo, repo_pathname.c_str());
@@ -319,10 +411,9 @@ int PartialCommit(const String& repo_pathname,
     }
 
     // Step 2: Create partial tree
+    CreateObjectRecursive(&partial_oid, NULL, repo, work_dir);
 
     // Step 3: Create commit tree
-
-    // Step 4: Write into the repository
 
     return 0;
 }
