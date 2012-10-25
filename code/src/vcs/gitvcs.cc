@@ -1,6 +1,7 @@
 // The implementation for git api as VCS
 //
 
+#include <dirent.h>
 #include <fstream>
 #include <git2.h>
 #include <iostream>
@@ -192,6 +193,39 @@ int GitObjectWrite(git_repository *repo, git_object *root, const String& destina
     return 0;
 }
 
+int CreateTreeRecursive(git_tree **tree,
+        git_repository *repo,
+        const String& source_path)
+{
+    DIR *directory = opendir(source_path.c_str());
+    struct dirent *directory_entry;
+    if (directory == NULL) {
+        LOG("Cannot open dir: %s", source_path.c_str());
+        return -1;
+    }
+
+    while ((directory_entry = readdir(directory)) != NULL) {
+#ifdef _DIRENT_HAVE_D_TYPE
+        switch (directory_entry->d_type) {
+            case DT_DIR:
+                break;
+            case DT_REG:
+                break;
+            default:
+                // TODO Support symbolic link.
+                LOG("We do not support the file type %d yet.", directory_entry->d_type);
+        };
+#else
+        LOG("The file system does not support DIRENT_TYPE. We cannot continue.");
+        return -1;
+#endif
+    }
+
+    closedir(directory);
+
+    return 0;
+}
+
 // Checkout a commit
 int GitVCS::Checkout(const String& repo_pathname,
         const String& commit_id,
@@ -265,7 +299,6 @@ int GitVCS::Checkout(const String& repo_pathname,
 int GitVCS::Commit(const String& repo_pathname,
         const Vector<String>& change_list)
 {
-    // TODO Implement
     return 0;
 }
 
@@ -275,6 +308,22 @@ int PartialCommit(const String& repo_pathname,
         const Vector<String>& change_list,
         const String& old_commit_id)
 {
+    int rc;
+    git_repository *repo;
+
+    // Step 1: Open repository
+    rc = git_repository_open(&repo, repo_pathname.c_str());
+    if (rc < 0) {
+        LOG("Failure: Cannot open repository.");
+        return rc;
+    }
+
+    // Step 2: Create partial tree
+
+    // Step 3: Create commit tree
+
+    // Step 4: Write into the repository
+
     return 0;
 }
 
