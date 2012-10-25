@@ -31,6 +31,12 @@ class GitVCS : public VersionControlSystem {
             const String& commit_id,
             const String& relative_path,
             const String& destination_path);
+
+        // Partial commit
+        virtual int PartialCommit(const String& repo_pathname,
+                const String& old_commit_id,
+                const String& relative_path,
+                const String& work_dir);
 };
 
 #endif // VCS_GITVCS_H_

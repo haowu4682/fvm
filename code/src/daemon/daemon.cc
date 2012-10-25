@@ -43,6 +43,15 @@ void ResponseForClient(int client_sockfd)
             vcs->Checkout(command_args[1], command_args[2], command_args[3],
                     command_args[4]);
         }
+    } else if (command_args[0] == "COMMIT") {
+        // Format: COMMIT repo old_commit_id relative_path source_path
+        if (command_args.size() < 5) {
+            LOG("Format error for CHECKOUT command.");
+        } else {
+            vcs->PartialCommit(command_args[1], command_args[2], command_args[3],
+                    command_args[4]);
+        }
+    } else if (command_args[0] == "COMMIT") {
     } else {
         // Undefined command, do nothing
         LOG("Undefined command: %s", command_args[0].c_str());

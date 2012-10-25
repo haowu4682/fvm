@@ -137,7 +137,7 @@ int GitTreeWriteCallback(const char *root,
     switch (entry_type) {
         case GIT_OBJ_TREE:
             // XXX: Use actual file mode!
-            mkdir(file_name.c_str(), 0755);
+            mkdir(file_name.c_str(),  0100755);
             break;
 
         case GIT_OBJ_BLOB:
@@ -225,13 +225,23 @@ int CombineObject(git_tree **new_root_tree,
     git_treebuilder *tree_builder;
     current_new_oid = combine_object_oid;
 
-    for (Vector<git_tree *>::reverse_iterator tree_link_path_ptr = tree_link_path.rbegin();
-            tree_link_path_ptr != tree_link_path.rend(); ++tree_link_path_ptr) {
-        current_parent_tree = *tree_link_path_ptr;
+    if (combine_point_list.size() != tree_link_path.size()) {
+        LOG("Unknown error in GitTreeSearch: combine_point_list_size = %ld, "
+                "tree_link_path_size = %ld", combine_point_list.size(), tree_link_path.size());
+        return -1;
+    }
+
+//    for (Vector<git_tree *>::reverse_iterator tree_link_path_ptr = tree_link_path.rbegin();
+//            tree_link_path_ptr != tree_link_path.rend(); ++tree_link_path_ptr) {
+    for (int i = combine_point_list.size() - 1; i >= 0; --i) {
+        current_parent_tree = tree_link_path[i];
+        String &current_child_name = combine_point_list[i];
 
         git_treebuilder_create(&tree_builder, current_parent_tree);
 
-        // TODO
+        // XXX Use actual mode
+        git_treebuilder_insert(NULL, tree_builder, current_child_name.c_str(),
+                &current_new_oid, 0644);
 
         git_treebuilder_free(tree_builder);
     }
@@ -394,14 +404,17 @@ int GitVCS::Commit(const String& repo_pathname,
 
 // Commit the change into a specific repository, using the old commit id as the
 // base.
-int PartialCommit(const String& repo_pathname,
-        const Vector<String>& change_list,
+int GitVCS::PartialCommit(const String& repo_pathname,
+//        const Vector<String>& change_list,
         const String& old_commit_id,
+        const String& relative_path,
         const String& work_dir)
 {
     int rc;
     git_repository *repo;
-    git_oid root_oid, partial_oid;
+    git_tree *old_commit_tree, *new_commit_tree;
+    git_oid root_oid, partial_oid, old_commit_oid;
+    git_commit *old_commit;
 
     // Step 1: Open repository
     rc = git_repository_open(&repo, repo_pathname.c_str());
@@ -414,6 +427,25 @@ int PartialCommit(const String& repo_pathname,
     CreateObjectRecursive(&partial_oid, NULL, repo, work_dir);
 
     // Step 3: Create commit tree
+    rc = git_oid_fromstr(&old_commit_oid, old_commit_id.c_str());
+    if (rc < 0) {
+        LOG("Failure: Commit id cannot be found.");
+        return rc;
+    }
+
+    rc = git_commit_lookup(&old_commit, repo, &old_commit_oid);
+    if (rc < 0) {
+        LOG("Failure: Commit id cannot be found.");
+        return rc;
+    }
+
+    rc = git_commit_tree(&old_commit_tree, old_commit);
+    if (rc < 0) {
+        LOG("Failure: Commit id cannot be found.");
+        return rc;
+    }
+
+    CombineObject(&new_commit_tree, repo, old_commit_tree, partial_oid, relative_path);
 
     return 0;
 }

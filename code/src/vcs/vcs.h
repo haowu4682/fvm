@@ -31,6 +31,12 @@ class VersionControlSystem {
         virtual int Commit(const String& repo_pathname,
                 const Vector<String>& change_list) = 0;
 
+        // Partial commit into a repository according to the work dir
+        virtual int PartialCommit(const String& repo_pathname,
+                const String& old_commit_id,
+                const String& relative_path,
+                const String& work_dir) = 0;
+
         // Checkout a commit
         virtual int Checkout(const String& repo_pathname,
             const String& commit_id,
