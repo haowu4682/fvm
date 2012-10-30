@@ -42,6 +42,13 @@ class VersionControlSystem {
             const String& commit_id,
             const String& relative_path,
             const String& destination_path) = 0;
+
+        // Retrieve the HEAD commit
+        virtual int GetHead(const String& repo_pathname,
+                const String& branch_name,
+                String& head_out) = 0;
+        virtual int GetHead(const String& repo_pathname,
+                String& head_out) = 0;
 };
 
 #endif // VCS_VCS_H_

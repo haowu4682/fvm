@@ -37,6 +37,13 @@ class GitVCS : public VersionControlSystem {
                 const String& old_commit_id,
                 const String& relative_path,
                 const String& work_dir);
+
+        // Retrieve the HEAD commit
+        virtual int GetHead(const String& repo_pathname,
+                const String& branch_name,
+                String& head_out);
+        virtual int GetHead(const String& repo_pathname,
+                String& head_out);
 };
 
 #endif // VCS_GITVCS_H_

@@ -1,13 +1,19 @@
 // The files contains the command line interface for FVM
 
+#include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include <fvmclient.h>
+
 #include <common/common.h>
 #include <common/commands.h>
 #include <common/util.h>
+
+FVMClient client;
 
 void usage() {
     // TODO detail usage info
@@ -31,6 +37,63 @@ int cmd_exit(const Vector<String> &)
     return 1;
 }
 
+// Connect to the server
+int cmd_connect(const Vector<String> &args)
+{
+    int rc;
+
+    // Usage: connect server_addr port
+    if (args.size() < 3) {
+        printf("Usage: connect server_addr port");
+        return 0;
+    }
+
+    // Set up FVM client attributes
+    client.hostname(args[1]);
+    client.port(atoi(args[2].c_str()));
+
+    // Connect
+    rc = client.Connect();
+    if (rc < 0) {
+        LOG("Connection failed for %s:%s", args[1].c_str(), args[2].c_str());
+        return 0;
+    }
+
+    return 0;
+}
+
+// Link
+int cmd_link(const Vector<String> &args)
+{
+    int rc;
+
+    // Usage: link REPO LINK_SRC LINK_DST
+    if (args.size() < 4) {
+        printf("Usage: link repository link_src link_dst");
+        return 0;
+    }
+
+    if (!client.connected()) {
+        printf("Please connect to the server first.");
+        return 0;
+    }
+
+    String head_id;
+    rc = client.RetrieveHead(args[1], head_id);
+    if (rc < 0) {
+        LOG("Cannot retrieve HEAD status.");
+        return 0;
+    }
+
+    rc = client.Checkout(args[1], args[2], args[3], head_id);
+    if (rc < 0) {
+        LOG("Cannot checkout the specified repository.");
+        return 0;
+    }
+
+    return 0;
+}
+
 struct cmd_t {
     const char *cmd;
     int (*fn) (const Vector<String>& /* args */);
@@ -40,6 +103,10 @@ struct cmd_t fvm_commands[] = {
     // Single user mode command
     { "start", cmd_repo_start},
     { "backtrace", cmd_repo_backtrace},
+
+    // Sharing mode command
+    { "link", cmd_link},
+    //{ "checkout", cmd_checkout},
 
     // Universal command
     { "help", cmd_help },

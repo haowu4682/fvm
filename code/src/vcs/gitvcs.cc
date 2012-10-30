@@ -231,8 +231,6 @@ int CombineObject(git_tree **new_root_tree,
         return -1;
     }
 
-//    for (Vector<git_tree *>::reverse_iterator tree_link_path_ptr = tree_link_path.rbegin();
-//            tree_link_path_ptr != tree_link_path.rend(); ++tree_link_path_ptr) {
     for (int i = combine_point_list.size() - 1; i >= 0; --i) {
         current_parent_tree = tree_link_path[i];
         String &current_child_name = combine_point_list[i];
@@ -243,8 +241,13 @@ int CombineObject(git_tree **new_root_tree,
         git_treebuilder_insert(NULL, tree_builder, current_child_name.c_str(),
                 &current_new_oid, 0644);
 
+        git_treebuilder_write(&current_new_oid, repo, tree_builder);
+
         git_treebuilder_free(tree_builder);
     }
+
+    // Return the final root tree
+    git_tree_lookup(new_root_tree, repo, &current_new_oid);
 
     return 0;
 }
@@ -446,6 +449,74 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     }
 
     CombineObject(&new_commit_tree, repo, old_commit_tree, partial_oid, relative_path);
+
+    return 0;
+}
+
+// Retrieve the HEAD commit
+int GitVCS::GetHead(const String& repo_pathname,
+        String& head_out)
+{
+    int rc;
+    git_repository *repo;
+    git_reference *head_ref;
+    const git_oid *head_oid;
+    char head_name[GIT_OID_HEXSZ+1];
+    char *head_name_out;
+
+    // Step 1: Open repository
+    rc = git_repository_open(&repo, repo_pathname.c_str());
+    if (rc < 0) {
+        LOG("Failure: Cannot open repository.");
+        return rc;
+    }
+
+    // Step 2: Read head
+    rc = git_repository_head(&head_ref, repo);
+    if (rc < 0) {
+        LOG("Failure: Cannot open repository HEAD.");
+        return rc;
+    }
+
+    head_oid = git_reference_oid(head_ref);
+    if (rc < 0) {
+        LOG("Failure: Cannot retrieve the oid of the HEAD.");
+    }
+
+    head_name_out = git_oid_tostr(head_name, GIT_OID_HEXSZ+1, head_oid);
+
+    head_out = head_name_out;
+
+    return 0;
+}
+
+// Retrieve the HEAD commit
+int GitVCS::GetHead(const String& repo_pathname,
+        const String& branch_name,
+        String& head_out)
+{
+    int rc;
+    git_repository *repo;
+    git_reference *head_ref;
+    git_oid head_oid;
+    char head_name[GIT_OID_HEXSZ+1];
+    char *head_name_out;
+
+    // Step 1: Open repository
+    rc = git_repository_open(&repo, repo_pathname.c_str());
+    if (rc < 0) {
+        LOG("Failure: Cannot open repository.");
+        return rc;
+    }
+
+    rc = git_reference_name_to_oid(&head_oid, repo, branch_name.c_str());
+    if (rc < 0) {
+        LOG("Failure: Cannot retrieve the oid of the HEAD.");
+    }
+
+    head_name_out = git_oid_tostr(head_name, GIT_OID_HEXSZ+1, &head_oid);
+
+    head_out = head_name_out;
 
     return 0;
 }

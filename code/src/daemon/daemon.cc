@@ -51,7 +51,18 @@ void ResponseForClient(int client_sockfd)
             vcs->PartialCommit(command_args[1], command_args[2], command_args[3],
                     command_args[4]);
         }
-    } else if (command_args[0] == "COMMIT") {
+    } else if (command_args[0] == "GETHEAD") {
+        // Format GETHEAD repo [branch]
+        String head_commit_str;
+        if (command_args.size() < 2) {
+            LOG("Format GETHEAD repo [branch]");
+        } else if (command_args.size() == 2) {
+            vcs->GetHead(command_args[1], "master", head_commit_str);
+        } else {
+            vcs->GetHead(command_args[1], command_args[2], head_commit_str);
+        }
+
+        write(client_sockfd, head_commit_str.c_str(), head_commit_str.size());
     } else {
         // Undefined command, do nothing
         LOG("Undefined command: %s", command_args[0].c_str());
