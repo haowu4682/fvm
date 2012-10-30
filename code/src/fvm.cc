@@ -44,7 +44,7 @@ int cmd_connect(const Vector<String> &args)
 
     // Usage: connect server_addr port
     if (args.size() < 3) {
-        printf("Usage: connect server_addr port");
+        printf("Usage: connect server_addr port\n");
         return 0;
     }
 
@@ -53,12 +53,15 @@ int cmd_connect(const Vector<String> &args)
     client.port(atoi(args[2].c_str()));
 
     // Connect
+#if 0
     rc = client.Connect();
     if (rc < 0) {
         LOG("Connection failed for %s:%s", args[1].c_str(), args[2].c_str());
         return 0;
     }
+#endif
 
+    printf("Server set up finished.\n");
     return 0;
 }
 
@@ -69,22 +72,35 @@ int cmd_link(const Vector<String> &args)
 
     // Usage: link REPO LINK_SRC LINK_DST
     if (args.size() < 4) {
-        printf("Usage: link repository link_src link_dst");
+        printf("Usage: link repository link_src link_dst\n");
         return 0;
     }
 
+#if 0
     if (!client.connected()) {
-        printf("Please connect to the server first.");
+        printf("Please connect to the server first.\n");
         return 0;
     }
+#endif
 
     String head_id;
+    rc = client.Connect();
+    if (rc < 0) {
+        LOG("Cannot establish connection to the server.");
+        return 0;
+    }
+
     rc = client.RetrieveHead(args[1], head_id);
     if (rc < 0) {
         LOG("Cannot retrieve HEAD status.");
         return 0;
     }
 
+    rc = client.Connect();
+    if (rc < 0) {
+        LOG("Cannot establish connection to the server.");
+        return 0;
+    }
     rc = client.Checkout(args[1], args[2], args[3], head_id);
     if (rc < 0) {
         LOG("Cannot checkout the specified repository.");
@@ -106,6 +122,7 @@ struct cmd_t fvm_commands[] = {
 
     // Sharing mode command
     { "link", cmd_link},
+    { "connect", cmd_connect},
     //{ "checkout", cmd_checkout},
 
     // Universal command

@@ -29,6 +29,8 @@ void ResponseForClient(int client_sockfd)
     String buffer_str(buffer, size);
     Vector<String> command_args;
 
+    LOG("Recieve Command: %s", buffer_str.c_str());
+
     split(buffer_str, " ", command_args);
 
     // XXX Pass the vcs as a parameter
@@ -57,11 +59,12 @@ void ResponseForClient(int client_sockfd)
         if (command_args.size() < 2) {
             LOG("Format GETHEAD repo [branch]");
         } else if (command_args.size() == 2) {
-            vcs->GetHead(command_args[1], "master", head_commit_str);
+            vcs->GetHead(command_args[1], head_commit_str);
         } else {
             vcs->GetHead(command_args[1], command_args[2], head_commit_str);
         }
 
+        LOG("head commit: %s", head_commit_str.c_str());
         write(client_sockfd, head_commit_str.c_str(), head_commit_str.size());
     } else {
         // Undefined command, do nothing
@@ -105,6 +108,7 @@ int ListenAndResponse(int port)
                 &client_address_len);
         if (client_sockfd < 0)
             LOG("ERROR on accept");
+        printf("Connection established.\n");
         ResponseForClient(client_sockfd);
         close(client_sockfd);
     }
