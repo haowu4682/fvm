@@ -110,6 +110,37 @@ int cmd_link(const Vector<String> &args)
     return 0;
 }
 
+int cmd_commit(const Vector<String>& args)
+{
+    int rc;
+
+    String head_id;
+    rc = client.Connect();
+    if (rc < 0) {
+        LOG("Cannot establish connection to the server.");
+        return 0;
+    }
+
+    rc = client.RetrieveHead(args[1], head_id);
+    if (rc < 0) {
+        LOG("Cannot retrieve HEAD status.");
+        return 0;
+    }
+
+    rc = client.Connect();
+    if (rc < 0) {
+        LOG("Cannot establish connection to the server.");
+        return 0;
+    }
+    rc = client.Commit(args[1], args[2], args[3], head_id);
+    if (rc < 0) {
+        LOG("Cannot checkout the specified repository.");
+        return 0;
+    }
+
+    return 0;
+}
+
 struct cmd_t {
     const char *cmd;
     int (*fn) (const Vector<String>& /* args */);
@@ -121,8 +152,9 @@ struct cmd_t fvm_commands[] = {
     { "backtrace", cmd_repo_backtrace},
 
     // Sharing mode command
-    { "link", cmd_link},
     { "connect", cmd_connect},
+    { "link", cmd_link},
+    { "commit", cmd_commit},
     //{ "checkout", cmd_checkout},
 
     // Universal command
