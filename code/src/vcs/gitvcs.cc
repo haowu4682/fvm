@@ -1,6 +1,7 @@
 // The implementation for git api as VCS
 //
 
+#include <cstring>
 #include <dirent.h>
 #include <fstream>
 #include <git2.h>
@@ -289,7 +290,7 @@ int CombineObject(git_tree **new_root_tree,
 
         // TODO Check argument 5 later
         git_treebuilder_insert(NULL, tree_builder, current_child_name.c_str(),
-                &current_new_oid, GIT_FILEMODE_BLOB);
+                &current_new_oid, GIT_FILEMODE_TREE);
 
         git_treebuilder_write(&current_new_oid, repo, tree_builder);
 
@@ -340,6 +341,12 @@ int CreateObjectRecursive(git_oid *source_oid,
         git_treebuilder_create(&tree_builder, NULL);
 
         while ((directory_entry = readdir(directory)) != NULL) {
+            // Skip "." and ".."
+            //DBG("d_name = %s", directory_entry->d_name);
+            if ((!strcmp(directory_entry->d_name, ".")) ||
+                    (!strcmp(directory_entry->d_name, "..")))
+                continue;
+
             // Create an object for every child
             String child_absolute_path = source_path + '/' + directory_entry->d_name;
             mode_t child_mode;
@@ -471,8 +478,9 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     int rc;
     git_repository *repo;
     git_tree *old_commit_tree, *new_commit_tree;
-    git_oid root_oid, partial_oid, old_commit_oid;
+    git_oid root_oid, partial_oid, old_commit_oid, new_commit_id;
     git_commit *old_commit;
+    git_signature *author, *committer;
 
     // Step 1: Open repository
     rc = git_repository_open(&repo, repo_pathname.c_str());
@@ -483,6 +491,17 @@ int GitVCS::PartialCommit(const String& repo_pathname,
 
     // Step 2: Create partial tree
     CreateObjectRecursive(&partial_oid, NULL, repo, work_dir);
+
+    // DEBUG CODE
+    git_tree *partial_tree;
+    rc = git_tree_lookup(&partial_tree, repo, &partial_oid);
+    if (rc < 0) {
+        DBG("partial_oid is not a tree!");
+    } else {
+        DBG("partial_oid is a tree");
+        PrintTree(partial_tree);
+    }
+    // DEBUG CODE ENDS
 
     // Step 3: Create commit tree
     rc = git_oid_fromstr(&old_commit_oid, old_commit_id.c_str());
@@ -503,7 +522,43 @@ int GitVCS::PartialCommit(const String& repo_pathname,
         return rc;
     }
 
+    DBG("Old commit tree is:");
+    PrintTree(old_commit_tree);
+
     CombineObject(&new_commit_tree, repo, old_commit_tree, partial_oid, relative_path);
+
+    DBG("New commit tree is:");
+    PrintTree(new_commit_tree);
+
+    // Step 4: Write commit tree into HEAD
+    rc = git_signature_now(&author, username_.c_str(), user_email_.c_str());
+    if (rc < 0) {
+        LOG("Failure: Cannot create the author.");
+        return -1;
+    }
+
+    rc = git_signature_now(&committer, username_.c_str(), user_email_.c_str());
+    if (rc < 0) {
+        LOG("Failure: Cannot create the committer.");
+        return -1;
+    }
+
+    git_commit_create_v(
+            &new_commit_id,
+            repo,
+            "HEAD",
+            author,
+            committer,
+            NULL,
+            "",
+            new_commit_tree,
+            1,
+            old_commit);
+
+    // Step 5 Free resource
+    git_signature_free(author);
+    git_signature_free(committer);
+    git_repository_free(repo);
 
     return 0;
 }

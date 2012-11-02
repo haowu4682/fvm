@@ -9,6 +9,12 @@
 
 class FVMClient {
     public:
+        // Constructor
+        FVMClient(const String &username, const String &user_email) {
+            username_ = username;
+            user_email_ = user_email;
+        }
+
         // Accessors and Mutators
         void hostname(const String& value) { hostname_ = value; }
         String hostname() { return hostname_; }
@@ -42,6 +48,10 @@ class FVMClient {
         // Connection data
         bool connected_;
         int sockfd_;
+
+        // User data
+        String username_;
+        String user_email_;
 };
 
 #endif // FVM_CLIENT_H_

@@ -80,7 +80,9 @@ int FVMClient::Commit(const String &repo_path, const String &link_src,
     command_sout << "COMMIT " << repo_path << ' '
                  << old_commit_id << ' '
                  << link_src << ' '
-                 << link_dst;
+                 << link_dst << ' '
+                 << username_ << ' '
+                 << user_email_;
     String command_line = command_sout.str();
 
     int rc = write(sockfd_, command_line.c_str(), command_line.size());

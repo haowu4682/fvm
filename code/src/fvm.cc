@@ -13,7 +13,7 @@
 #include <common/commands.h>
 #include <common/util.h>
 
-FVMClient client;
+FVMClient *client;
 
 void usage() {
     // TODO detail usage info
@@ -49,12 +49,12 @@ int cmd_connect(const Vector<String> &args)
     }
 
     // Set up FVM client attributes
-    client.hostname(args[1]);
-    client.port(atoi(args[2].c_str()));
+    client->hostname(args[1]);
+    client->port(atoi(args[2].c_str()));
 
     // Connect
 #if 0
-    rc = client.Connect();
+    rc = client->Connect();
     if (rc < 0) {
         LOG("Connection failed for %s:%s", args[1].c_str(), args[2].c_str());
         return 0;
@@ -77,31 +77,31 @@ int cmd_link(const Vector<String> &args)
     }
 
 #if 0
-    if (!client.connected()) {
+    if (!client->connected()) {
         printf("Please connect to the server first.\n");
         return 0;
     }
 #endif
 
     String head_id;
-    rc = client.Connect();
+    rc = client->Connect();
     if (rc < 0) {
         LOG("Cannot establish connection to the server.");
         return 0;
     }
 
-    rc = client.RetrieveHead(args[1], head_id);
+    rc = client->RetrieveHead(args[1], head_id);
     if (rc < 0) {
         LOG("Cannot retrieve HEAD status.");
         return 0;
     }
 
-    rc = client.Connect();
+    rc = client->Connect();
     if (rc < 0) {
         LOG("Cannot establish connection to the server.");
         return 0;
     }
-    rc = client.Checkout(args[1], args[2], args[3], head_id);
+    rc = client->Checkout(args[1], args[2], args[3], head_id);
     if (rc < 0) {
         LOG("Cannot checkout the specified repository.");
         return 0;
@@ -115,24 +115,24 @@ int cmd_commit(const Vector<String>& args)
     int rc;
 
     String head_id;
-    rc = client.Connect();
+    rc = client->Connect();
     if (rc < 0) {
         LOG("Cannot establish connection to the server.");
         return 0;
     }
 
-    rc = client.RetrieveHead(args[1], head_id);
+    rc = client->RetrieveHead(args[1], head_id);
     if (rc < 0) {
         LOG("Cannot retrieve HEAD status.");
         return 0;
     }
 
-    rc = client.Connect();
+    rc = client->Connect();
     if (rc < 0) {
         LOG("Cannot establish connection to the server.");
         return 0;
     }
-    rc = client.Commit(args[1], args[2], args[3], head_id);
+    rc = client->Commit(args[1], args[2], args[3], head_id);
     if (rc < 0) {
         LOG("Cannot checkout the specified repository.");
         return 0;
@@ -196,6 +196,13 @@ int main(int argc, char **argv)
     int rc = 0;
     Vector<String> command_args;
 
+    if (argc < 3) {
+        printf("Usage: fvm user_name user_email");
+        return 0;
+    }
+
+    client = new FVMClient(argv[1], argv[2]);
+
     while (rc != 1) {
         std::cout << "fvm> ";
         command_args.clear();
@@ -206,6 +213,8 @@ int main(int argc, char **argv)
             DBG("Command execution failed. error code = %d", rc);
         }
     }
+
+    delete client;
 
     return 0;
 }

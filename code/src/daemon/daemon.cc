@@ -16,6 +16,8 @@
 #include <vcs/gitvcs.h>
 #include <vcs/vcs.h>
 
+GitVCS *vcs;
+
 void ResponseForClient(int client_sockfd)
 {
     size_t size;
@@ -33,9 +35,6 @@ void ResponseForClient(int client_sockfd)
 
     split(buffer_str, " ", command_args);
 
-    // XXX Pass the vcs as a parameter
-    VersionControlSystem *vcs = new GitVCS;
-
     // Execute the command according to the command string
     if (command_args[0] == "CHECKOUT") {
         // Format: CHECKOUT repo commit_id relative_path destination_path
@@ -46,10 +45,12 @@ void ResponseForClient(int client_sockfd)
                     command_args[4]);
         }
     } else if (command_args[0] == "COMMIT") {
-        // Format: COMMIT repo old_commit_id relative_path source_path
-        if (command_args.size() < 5) {
-            LOG("Format error for CHECKOUT command.");
+        // Format: COMMIT repo old_commit_id relative_path source_path author email
+        if (command_args.size() < 7) {
+            LOG("Format error for COMMIT command.");
         } else {
+            vcs->username(command_args[5]);
+            vcs->user_email(command_args[6]);
             vcs->PartialCommit(command_args[1], command_args[2], command_args[3],
                     command_args[4]);
         }
@@ -70,8 +71,6 @@ void ResponseForClient(int client_sockfd)
         // Undefined command, do nothing
         LOG("Undefined command: %s", command_args[0].c_str());
     }
-
-    delete vcs;
 }
 
 int ListenAndResponse(int port)
@@ -126,7 +125,11 @@ int main(int argc, char **argv)
 
     int port = atoi(argv[1]);
 
+    vcs = new GitVCS;
+
     ListenAndResponse(port);
+
+    delete vcs;
 
     return 0;
 }

@@ -16,6 +16,11 @@ class GitVCS : public VersionControlSystem {
         GitVCS() {}
         virtual ~GitVCS() {}
 
+        // Mutators
+        void username(const String &value) { username_ = value; }
+        void user_email(const String &value) { user_email_ = value; }
+
+
         // Get the change list for a specific repository
         // Return the number of items to be included in the change list.
         virtual int GetChangeList(const String& repo_pathname,
@@ -44,6 +49,10 @@ class GitVCS : public VersionControlSystem {
                 String& head_out);
         virtual int GetHead(const String& repo_pathname,
                 String& head_out);
+
+    private:
+        String username_;
+        String user_email_;
 };
 
 #endif // VCS_GITVCS_H_
