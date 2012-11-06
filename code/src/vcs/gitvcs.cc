@@ -306,12 +306,18 @@ int CombineObject(git_tree **new_root_tree,
 int CreateObjectRecursive(git_oid *source_oid,
         mode_t *source_mode,
         git_repository *repo,
-        const String& source_path)
+        const String& source_path,
+        const String& relative_path,
+        IsIncludeOperator &IsIncluded)
 {
     int rc;
 
     git_oid child_oid;
     struct stat source_stat;
+
+    if (!IsIncluded(relative_path)) {
+        return 0;
+    }
 
     stat(source_path.c_str(), &source_stat);
     if (source_mode != NULL) {
@@ -349,10 +355,11 @@ int CreateObjectRecursive(git_oid *source_oid,
 
             // Create an object for every child
             String child_absolute_path = source_path + '/' + directory_entry->d_name;
+            String child_relative_path = relative_path + '/' + directory_entry->d_name;
             mode_t child_mode;
 
             rc = CreateObjectRecursive(&child_oid, &child_mode, repo,
-                    child_absolute_path.c_str());
+                    child_absolute_path.c_str(), child_relative_path.c_str(), IsIncluded);
             if (rc < 0) {
                 return rc;
             }
@@ -470,10 +477,10 @@ int GitVCS::Commit(const String& repo_pathname,
 // Commit the change into a specific repository, using the old commit id as the
 // base.
 int GitVCS::PartialCommit(const String& repo_pathname,
-        //        const Vector<String>& change_list,
         const String& old_commit_id,
         const String& relative_path,
-        const String& work_dir)
+        const String& work_dir,
+        IsIncludeOperator &IsIncluded)
 {
     int rc;
     git_repository *repo;
@@ -490,8 +497,9 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     }
 
     // Step 2: Create partial tree
-    CreateObjectRecursive(&partial_oid, NULL, repo, work_dir);
+    CreateObjectRecursive(&partial_oid, NULL, repo, work_dir, relative_path, IsIncluded);
 
+#if 0
     // DEBUG CODE
     git_tree *partial_tree;
     rc = git_tree_lookup(&partial_tree, repo, &partial_oid);
@@ -502,6 +510,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
         PrintTree(partial_tree);
     }
     // DEBUG CODE ENDS
+#endif
 
     // Step 3: Create commit tree
     rc = git_oid_fromstr(&old_commit_oid, old_commit_id.c_str());

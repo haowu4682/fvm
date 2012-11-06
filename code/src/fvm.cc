@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <fvmclient.h>
+#include <partialtracer.h>
 
 #include <common/common.h>
 #include <common/commands.h>
@@ -92,6 +93,10 @@ int cmd_link(const Vector<String> &args)
         LOG("Cannot checkout the specified repository.");
         return 0;
     }
+
+    // Start the tracer
+    PartialTracer *tracer = new PartialTracer(args[1], args[2], args[3], client);
+    tracer->Start();
 
     return 0;
 }

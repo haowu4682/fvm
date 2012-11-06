@@ -18,6 +18,9 @@ class TraceLevelManager {
     public:
         // Constructors
         //TraceLevelManager();
+        const Map<String, TraceLevel>* trace_level_map() {
+            return &trace_level_map_;
+        }
 
         // Get the tracelevel for a specific pathname
         TraceLevel GetTraceLevel(const String& pathname);
@@ -25,6 +28,9 @@ class TraceLevelManager {
 
         // Add a trace level item to the manager
         void AddTraceLevelItem(const String& pathname, TraceLevel level);
+
+        // Convert trace level name into value
+        //static TraceLevel GetTraceLevelFromString(const String& name);
 
     private:
         Map<String, TraceLevel> trace_level_map_;
@@ -42,6 +48,9 @@ class RepoConfig {
         void time_interval(long value) { time_interval_s_ = value; }
         String repo_path() { return repo_path_; }
         void repo_path(const String& value) { repo_path_ = value; }
+        const Map<String, TraceLevel>* trace_level_map() {
+            return trace_level_manager_.trace_level_map();
+        }
 
         // Return the tracelevel of a specific pathname
         TraceLevel GetTraceLevel(const String& pathname) {

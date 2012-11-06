@@ -16,6 +16,13 @@ enum FileStatus {
     kUntracked
 };
 
+// The Interface for judging whether a pathname should be included in a
+// commitment
+class IsIncludeOperator {
+    public:
+        virtual bool operator() (const String& pathname) = 0;
+};
+
 // The Interface for a version control system
 class VersionControlSystem {
     public:
@@ -35,7 +42,8 @@ class VersionControlSystem {
         virtual int PartialCommit(const String& repo_pathname,
                 const String& old_commit_id,
                 const String& relative_path,
-                const String& work_dir) = 0;
+                const String& work_dir,
+                IsIncludeOperator &IsIncluded) = 0;
 
         // Checkout a commit
         virtual int Checkout(const String& repo_pathname,

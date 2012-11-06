@@ -1,11 +1,11 @@
 // The FVM Daemon
 
+#include <cstdlib>
+#include <cstring>
 #include <limits.h>
 #include <netinet/in.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string>
-#include <string.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <unistd.h>
@@ -13,10 +13,41 @@
 
 #include <common/common.h>
 #include <common/util.h>
+#include <single/config.h>
 #include <vcs/gitvcs.h>
 #include <vcs/vcs.h>
 
 GitVCS *vcs;
+
+class AlwaysTrueAdv : public IsIncludeOperator {
+    virtual bool operator() (const String&) {
+        return true;
+    }
+};
+
+void ParseTraceLevel(const Vector<String>& source,
+        size_t begin_index, size_t end_size,
+        TraceLevelManager &manager)
+{
+    for (size_t i = begin_index; i < end_size - 1; i = i + 2) {
+        String pathname = source[i];
+        String levelname = source[i+1];
+        //TraceLevel level = TraceLevelManager::GetTraceLevelFromString(levelname);
+        TraceLevel level = (TraceLevel) atoi(levelname.c_str());
+        manager.AddTraceLevelItem(pathname, level);
+    }
+}
+
+// TODO Better naming
+class TraceLevelManagerAdv : public TraceLevelManager, public IsIncludeOperator {
+    public:
+        virtual bool operator() (const String& pathname);
+};
+
+bool TraceLevelManagerAdv::operator() (const String& pathname)
+{
+    return GetTraceLevel(pathname) != kNone;
+}
 
 void ResponseForClient(int client_sockfd)
 {
@@ -48,11 +79,19 @@ void ResponseForClient(int client_sockfd)
         // Format: COMMIT repo old_commit_id relative_path source_path author email
         if (command_args.size() < 7) {
             LOG("Format error for COMMIT command.");
+        } else if (command_args.size() == 7) {
+            vcs->username(command_args[5]);
+            vcs->user_email(command_args[6]);
+            AlwaysTrueAdv AlwaysTrue;
+            vcs->PartialCommit(command_args[1], command_args[2], command_args[3],
+                    command_args[4], AlwaysTrue);
         } else {
+            TraceLevelManagerAdv manager;
+            ParseTraceLevel(command_args, 7, command_args.size(), manager);
             vcs->username(command_args[5]);
             vcs->user_email(command_args[6]);
             vcs->PartialCommit(command_args[1], command_args[2], command_args[3],
-                    command_args[4]);
+                    command_args[4], manager);
         }
     } else if (command_args[0] == "GETHEAD") {
         // Format GETHEAD repo [branch]

@@ -41,7 +41,8 @@ class GitVCS : public VersionControlSystem {
         virtual int PartialCommit(const String& repo_pathname,
                 const String& old_commit_id,
                 const String& relative_path,
-                const String& work_dir);
+                const String& work_dir,
+                IsIncludeOperator &IsIncluded);
 
         // Retrieve the HEAD commit
         virtual int GetHead(const String& repo_pathname,

@@ -20,14 +20,14 @@ class Tracer {
         Tracer(const String& config_str);
 
         // Initialize the tracer thread
-        void Init();
+        virtual void Init();
 
         // Start the tracer
-        void Start();
+        virtual void Start();
         // Stop the tracer
-        void Stop();
+        virtual void Stop();
 
-    private:
+    protected:
         // Whether the tracing is running.
         bool running_;
 

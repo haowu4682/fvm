@@ -74,7 +74,7 @@ int FVMClient::Checkout(const String &repo_path, const String &link_src,
 
 // Make a partial commit call to the daemon
 int FVMClient::Commit(const String &repo_path, const String &link_src,
-        const String &link_dst, const String &old_commit_id)
+        const String &link_dst, const String &old_commit_id, RepoConfig *config /* = NULL */)
 {
     std::ostringstream command_sout;
     command_sout << "COMMIT " << repo_path << ' '
@@ -83,6 +83,14 @@ int FVMClient::Commit(const String &repo_path, const String &link_src,
                  << link_dst << ' '
                  << username_ << ' '
                  << user_email_;
+    if (config != NULL) {
+        const Map<String, TraceLevel>* trace_level_map = config->trace_level_map();
+        for (Map<String, TraceLevel>::const_iterator it = trace_level_map->begin();
+                it != trace_level_map->end(); ++it) {
+            command_sout << ' ' << it->first
+                         << ' ' << it->second;
+        }
+    }
     String command_line = command_sout.str();
 
     int rc = write(sockfd_, command_line.c_str(), command_line.size());
