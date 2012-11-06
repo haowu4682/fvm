@@ -15,21 +15,7 @@
 
 FVMClient *client;
 
-void usage() {
-    // TODO detail usage info
-    printf("Usage: fvm <command> [<arguments>...]\n");
-}
-
-// Display Help Information
-int cmd_help(const Vector<String>& args)
-{
-    // TODO: Display internal help information for every command
-
-    // Display the universal help command
-    usage();
-
-    return 0;
-}
+int cmd_help(const Vector<String>& args);
 
 // Exit the fvm manager
 int cmd_exit(const Vector<String> &)
@@ -144,23 +130,52 @@ int cmd_commit(const Vector<String>& args)
 struct cmd_t {
     const char *cmd;
     int (*fn) (const Vector<String>& /* args */);
+    const char *help_msg;
 };
 
 struct cmd_t fvm_commands[] = {
     // Single user mode command
-    { "start", cmd_repo_start},
-    { "backtrace", cmd_repo_backtrace},
+    { "start", cmd_repo_start, "start automatical tracing"},
+    { "backtrace", cmd_repo_backtrace, "enter backtrace mode"},
 
     // Sharing mode command
-    { "connect", cmd_connect},
-    { "link", cmd_link},
-    { "commit", cmd_commit},
+    { "server", cmd_connect, "Set up the server information"},
+    { "link", cmd_link, "Link a repository to a specified destination"},
+    { "commit", cmd_commit, "Manually make a commitment"},
     //{ "checkout", cmd_checkout},
 
     // Universal command
-    { "help", cmd_help },
-    { "exit", cmd_exit }
+    { "help", cmd_help, "List help information" },
+    { "exit", cmd_exit, "Exit the FVM console"}
 };
+
+void usage() {
+    printf("Usage: <command> [<arguments>...]\n");
+    printf("Command List:\n");
+    for (int i = 0; i < ARRAY_SIZE(fvm_commands); ++i) {
+        printf("%s - %s\n", fvm_commands[i].cmd, fvm_commands[i].help_msg);
+    }
+}
+
+// Display Help Information
+int cmd_help(const Vector<String>& args)
+{
+
+    // Display the universal help command
+    if (args.size() > 1) {
+        for (int i = 0; i < ARRAY_SIZE(fvm_commands); ++i) {
+            if (args[0] == fvm_commands[i].cmd) {
+                // TODO: Display internal help information for every command
+                printf("No help information yet.\n");
+                return 0;
+            }
+        }
+    }
+
+    usage();
+
+    return 0;
+}
 
 // Handle a pre-defined command in commands.h
 // Return 0: Normal Execution
