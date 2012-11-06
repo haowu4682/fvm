@@ -1,0 +1,123 @@
+S2 Motivation
+
+* Provide a system which provides the following properties.
+    - Files in the system are version controlled, with the ability to roll back
+      files to previous point.
+    - Different Users could share files
+        # A user could share a subset of another user's files.
+        # A user may have no permission to access files that the user does not
+          need to share.
+    - Users who share files work independently
+        # A user is working on the shared files as if no one else is using them.
+        # The changes of different users are seperated recorded.
+        # A user could see the update of other users at some timing (e.g. when
+          the user's work has finished, or when the user makes a commitment).
+        # Every user should see the same content when the user "synchronize"
+          with others. In git, "synchronize" means "git fetch" and "git merge".
+
+* Previous systems may provide a part of these features.
+    - Automatical snapshot system allows to roll back files.
+    - A network file system allows users to share files (without independency).
+        # It could share a subset of files.
+    - A version control system provides file sharing with independency
+        # However, version control system usually cannot provide sharing a
+          subset of files.
+        # A version control system could not solve the permission issue.
+
+* A solution comes from combining different techniques.
+    - FVM provides a automatically tracking mechanism similar to an automatical
+      snapshot system (design.txt:S2.3.1 - S2.3.2)
+    - FVM uses underlying network file system to allow file sharing (design.txt:
+      S2.1)
+    - FVM uses underlying version control system to deal with the "sharing with
+      independency" problem (design.txt:S2.2)
+
+* The solution also has its own techniques to deal with some challenges
+    - FVM uses partial backtrace mode to manage rollback (Challenge: S3.2,
+            design.txt:S2.3.3-S2.3.4, S2.4.4.3, S2.4.5)
+    - FVM uses packages to manage the record that which files are being shared.
+            (design.txt:S2.4.1-S2.4.2)
+    - FVM uses FVM Daemon to solve the permission problem during sharing.
+            (Challenge: S3.3, design.txt:2.4.3-2.4.4)
+
+
+
+S3 Challenges
+
+S3.1 The tradeoff between the ability to rollback and the cost to record past
+    versions
+
+    - When FVM records more information, which brings more time and space cost,
+      a user has more versions to rollback.
+
+        # "How often FVM records a version" is a parameter
+
+    - FVM could remove some old versions to save space
+
+        # [Santry99] suggests that a user's ability to distinguish between
+          adjacent versions fades during time passing.
+
+        # According to the claim, FVM could remove some versions long time ago
+          to save space.
+
+    - FVM could use incremental storage for storing different versions of a file
+        (a.k.a de-duplication in many context), thus saves both time and space
+
+        # Using some file systems with de-duplication feature could help in some
+          way. But most pratical file system only supports block-level
+          de-duplication, which does not save too much when a user is working on
+          small files, which is a common phenomenon when the user is using a
+          desktop computer. (It costs too much for a general file system to
+          support byte-level de-duplication.)
+
+        # FVM may try to do some byte level deduplication, but this is future
+          work.
+
+S3.2 The definition of "rollback", and the method to allow a user to rollback
+    without intefering the user's current files
+
+    - A user can checkout a previous version of a subset of files and enters
+        backtrace mode.
+
+        # The changes of the files in backtrace mode develops independently
+          from the mainstream in a separated branch.
+
+        # The user can merge the changes of those file into the mainstream after
+          the backtrace mode.
+
+S3.3 The ability for a user to share a subset of another user's files, without
+    the permission to access other files of the user.
+
+    - Users cannot view each other's files freely.
+
+    - Trivial solution: users can view each other's metadata freely, and use the
+      metadata and the data with permission to get the files to be shared.
+
+        # However the user has to know the metadata of the files without
+          permission for the version control system to checkout a specified
+          commitment. This solution leaks information of those files.
+
+    - FVM uses a daemon on the server side to solve the permission problem.
+
+        # The daemon on the server side is trusted by every user to access their
+          files.
+
+        # Each user could ask the daemon to checkout the files with permission
+          to the client.
+
+
+S3.4 The ability to help users distinguish between versions.
+
+    - Most previous systems do not provide this ability.
+
+    - The user could recognize versions by their commit time and content.
+
+    - FVM does not have a good solution.
+
+S3.5 The synchronization problem when different users work on the same subset of
+    shared files
+    - This challenge is minor. FVM does not have a good solution right now.
+
+References
+See "design.txt"
+
