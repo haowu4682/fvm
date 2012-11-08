@@ -351,7 +351,7 @@ Daemon's work for the request:
     Then "987654321abcdef" is the object we are looking for.
 (4) Recursively copy "987654321abcdef" and its children objects to
     /home/alice/bob-project. The daemon could check if the destination file has
-    been modified to avoid some work.
+    been modified to avoid some work. See 2.4.3.3 for more details.
 
 +++++++ Partial Checkout Example Ends +++++++
 
@@ -377,7 +377,7 @@ Daemon's work for the request:
 (1) Find the repository in /home/bob/.git
 (2) Create objects for files and directories in /home/alice/bob-project. The
     daemon could use old objects if a file has not changed. Say the object id of
-    the root is "54321fedcba9876"
+    the root is "54321fedcba9876". See 2.4.3.3 for more details.
 (3) Find the commitment object with id 0x1abcdef2345
 (4) Find the object in "/project". For example, if the root object for
     0x1abcdef2345 is:
@@ -393,6 +393,25 @@ Daemon's work for the request:
 (6) Return the id of the new commit object to the client.
 
 ++++++ Partial Commit Example Ends ++++++
+
+
+
+2.4.3.3 Encoding permission information
+
+In order to ensure that the observer can only access the files that he has the
+permission to access, FVM need to maintain the access control information for
+files. However, many VCS does not support this behavior, so FVM should perform
+this action, and FVM daemon will take care of that.
+
+FVM will encode the access control information into the entry name for each
+file. It looks like:
+++++++++++++++++++++++++++++
+name type hash_id
+0755:alice:alice:project tree 987654321abcdef
+0755:alice:alice:Document tree aaaaaaaaaaaaa
+0755:alice:alice:foo.txt blob bbbbbbbbbbbbb
+++++++++++++++++++++++++++++
+
 
 
 2.4.4 FVM Multi-User Mode
