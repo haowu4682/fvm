@@ -4,10 +4,27 @@
 #define VCS_GITVCS_H_
 
 #include <string>
+#include <sys/stat.h>
 #include <vector>
 
 #include <common/common.h>
 #include <vcs/vcs.h>
+
+struct GitTreeEntryName {
+    mode_t mode;
+    String user;
+    String group;
+    String name;
+
+    String ToString();
+    int FromString(const String& str);
+    int Init(const String& name, struct stat* stat);
+    int WriteToFile(const String& filepath);
+
+    GitTreeEntryName();
+    GitTreeEntryName(const String& str);
+    GitTreeEntryName(const String& name, struct stat* stat);
+};
 
 // The Interface for a version control system
 class GitVCS : public VersionControlSystem {

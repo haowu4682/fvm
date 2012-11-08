@@ -5,7 +5,9 @@
 #include <dirent.h>
 #include <fstream>
 #include <git2.h>
+#include <grp.h>
 #include <iostream>
+#include <pwd.h>
 #include <sstream>
 #include <string>
 #include <sys/stat.h>
@@ -43,6 +45,107 @@ void PrintTree(git_tree *tree)
         PrintTreeEntry(entry);
     }
     printf("\n");
+}
+
+String GitTreeEntryName::ToString()
+{
+    // Use "/" to divide different attributes of a file.
+    // Since "/" is forbidden in Linux filenames.
+    std::ostringstream sout;
+
+    sout << mode << "/"
+         << user << "/"
+         << group << "/"
+         << name;
+
+    return sout.str();
+}
+
+int GitTreeEntryName::FromString(const String& str)
+{
+    Vector<String> str_array;
+    split(str, "/", str_array);
+
+    if (str_array.size() < 4) {
+        LOG("tree entry name corrupted: %s", str.c_str());
+        return -1;
+    }
+
+    mode = atoi(str_array[0].c_str());
+    user = str_array[1];
+    group = str_array[2];
+    name = str_array[3];
+
+    return 0;
+}
+
+int GitTreeEntryName::Init(const String& filename, struct stat* stat)
+{
+    assert(stat != NULL);
+
+    // Read user name and group name
+    struct passwd *password_info = getpwuid(stat->st_uid);
+    struct group *group_info = getgrgid(stat->st_gid);
+
+    if (password_info == NULL) {
+        LOG("Cannot find the specified user id for %s, uid = %d",
+                filename.c_str(), stat->st_uid);
+        return -1;
+    }
+
+    if (group_info == NULL) {
+        LOG("Cannot find the specified group id for %s, gid = %d",
+                filename.c_str(), stat->st_gid);
+        return -1;
+    }
+
+    // Set attributes
+    mode = stat->st_mode;
+    name = filename;
+    user = password_info->pw_name;
+    group = group_info->gr_name;
+}
+
+int GitTreeEntryName::WriteToFile(const String& filepath)
+{
+    // Set mode
+    chmod(filepath.c_str(), mode);
+
+    // Get uid and gid
+    struct passwd *password_info = getpwnam(user.c_str());
+    struct group *group_info = getgrnam(group.c_str());
+
+    if (password_info == NULL) {
+        LOG("Cannot find the specified user id for %s, username = %s",
+                filepath.c_str(), user.c_str());
+        return -1;
+    }
+
+    if (group_info == NULL) {
+        LOG("Cannot find the specified group id for %s, groupname = %s",
+                filepath.c_str(), group.c_str());
+        return -1;
+    }
+
+    // Set owner
+    chown(filepath.c_str(), password_info->pw_uid, group_info->gr_gid);
+
+    return 0;
+}
+
+GitTreeEntryName::GitTreeEntryName()
+{
+    // do nothing
+}
+
+GitTreeEntryName::GitTreeEntryName(const String& str)
+{
+    FromString(str);
+}
+
+GitTreeEntryName::GitTreeEntryName(const String& name, struct stat* stat)
+{
+    Init(name, stat);
 }
 
 int ChangeListCallback(const char *pathname_c_str, unsigned status, void* list)
