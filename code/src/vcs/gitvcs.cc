@@ -19,6 +19,14 @@
 
 #define GIT_BINARY "/usr/bin/git"
 
+void PrintOid(const git_oid *oid)
+{
+    char buf[10000];
+    git_oid_tostr(buf, 10000, oid);
+
+    printf("%s\n", buf);
+}
+
 void PrintTreeEntry(const git_tree_entry *entry)
 {
     const git_oid *id;
@@ -184,10 +192,29 @@ int GitVCS::GetChangeList(const String& repo_pathname,
 const git_tree_entry * GitTreeEntrySearchByName(git_tree *tree, const String& filename)
 {
     // TODO implement
-    return 0;
+    //
+    unsigned tree_size;
+    const git_tree_entry *tree_entry;
+    const char * tree_entry_name;
+    Vector<String> splitted_tree_entry_name;
+
+    tree_size = git_tree_entrycount(tree);
+
+    for (unsigned index = 0; index < tree_size; ++index) {
+        tree_entry = git_tree_entry_byindex(tree, index);
+        tree_entry_name = git_tree_entry_name(tree_entry);
+
+        split(tree_entry_name, "/", splitted_tree_entry_name);
+
+        if (splitted_tree_entry_name.back() == filename) {
+            return tree_entry;
+        }
+    }
+
+    return NULL;
 }
 
-int GitTreeSearch(git_object **relative_object,
+int GitTreeSearch(const git_oid ** relative_oid,
         Vector<git_tree *> *tree_link_path,
         git_repository *repo,
         git_tree *root_tree,
@@ -199,9 +226,12 @@ int GitTreeSearch(git_object **relative_object,
 
     git_tree *current_tree = root_tree;
     const git_tree_entry *tree_entry;
-    git_object *current_object;
 
-    *relative_object = NULL;
+    const git_oid *current_oid;
+
+    *relative_oid = git_tree_id(root_tree);
+    DBG("OID:");
+    PrintOid(*relative_oid);
 
     for (int i = 0; i < relative_path_splitted.size(); ++i) {
         if (tree_link_path != NULL) {
@@ -219,34 +249,31 @@ int GitTreeSearch(git_object **relative_object,
         PrintTreeEntry(tree_entry);
 
         // Step 2: Find the object
-        rc = git_tree_entry_to_object(&current_object, repo, tree_entry);
-        if (rc < 0) {
-            LOG("Unknown error while converting tree_entry to git_object, error code: %d", rc);
-            return rc;
-        }
-        if (current_object == NULL) {
+        current_oid = git_tree_entry_id(tree_entry);
+        if (current_oid == NULL) {
             LOG("can not find the object to the entry.");
-            return rc;
+            return -1;
         }
+
+        DBG("CURRENT OID:");
+        PrintOid(current_oid);
 
         // Step 3: Check if the object is tree object, and modify current_tree
         if (i != relative_path_splitted.size() - 1) {
-            git_otype current_object_type = git_object_type(current_object);
-            if (current_object_type != GIT_OBJ_TREE) {
-                LOG("path name is not a directory: %s", relative_path_splitted[i].c_str());
-                return -1;
-            }
 
-            const git_oid *current_object_oid = git_object_id(current_object);
-
-            rc = git_tree_lookup(&current_tree, repo, current_object_oid);
+            rc = git_tree_lookup(&current_tree, repo, current_oid);
             if (rc < 0) {
-                LOG("Unknown error while converting git_object to git_tree");
+                LOG("Unknown error while converting git_object to git_tree for pathname: %s",
+                        relative_path_splitted[i].c_str());
+                return rc;
             }
         }
     }
 
-    *relative_object = current_object;
+    *relative_oid = current_oid;
+
+    DBG("RELATIVE OID RESULT:");
+    PrintOid(*relative_oid);
 
     return 0;
 }
@@ -336,10 +363,10 @@ int GitTreeWrite(git_repository *repo, git_tree *tree, const String& destination
     return 0;
 }
 
-int GitObjectWrite(git_repository *repo, git_object *root, const String& destination)
+int GitObjectWrite(git_repository *repo, const git_oid *root_oid, const String& destination)
 {
-    git_otype root_type = git_object_type(root);
-    const git_oid *root_oid;
+    git_otype root_type;
+    git_object *root_object;
     git_blob *root_blob;
     git_tree *root_tree;
     int rc;
@@ -347,10 +374,16 @@ int GitObjectWrite(git_repository *repo, git_object *root, const String& destina
     GitTreeEntryName tree_entry_name;
     struct stat destination_stat;
 
+    rc = git_object_lookup(&root_object, repo, root_oid, GIT_OBJ_ANY);
+    if (rc < 0) {
+        LOG("Cannot find object!");
+        return rc;
+    }
+    root_type = git_object_type(root_object);
+
     switch (root_type) {
 
         case GIT_OBJ_TREE:
-            root_oid = git_object_id(root);
             rc = git_tree_lookup(&root_tree, repo, root_oid);
             if (rc < 0) {
                 LOG("Error in git data structure: tree is not found.");
@@ -360,7 +393,6 @@ int GitObjectWrite(git_repository *repo, git_object *root, const String& destina
             break;
 
         case GIT_OBJ_BLOB:
-            root_oid = git_object_id(root);
             rc = git_blob_lookup(&root_blob, repo, root_oid);
             if (rc < 0) {
                 LOG("Error in git data structure: blob is not found.");
@@ -373,7 +405,13 @@ int GitObjectWrite(git_repository *repo, git_object *root, const String& destina
             break;
 
         default:
-            LOG("Unexpected type %d, skipped.", root_type);
+            char buf[10000];
+            char *out = git_oid_tostr(buf, 10000, root_oid);
+            if (out != NULL) {
+                LOG("Unexpected type %d for %s, skipped.", root_type, out);
+            } else {
+                LOG("Unexpected type %d for unknown object, skipped.", root_type);
+            }
     }
     return 0;
 }
@@ -385,7 +423,7 @@ int CombineObject(git_tree **new_root_tree,
         const String& combine_point)
 {
     int rc;
-    git_object *old_combine_object;
+    const git_oid *old_combine_oid;
     Vector<git_tree *> tree_link_path;
 
     // Divide the combine point
@@ -393,7 +431,7 @@ int CombineObject(git_tree **new_root_tree,
     split(combine_point, "/", combine_point_list);
 
     // Search for the combine point in the root tree
-    rc = GitTreeSearch(&old_combine_object, &tree_link_path, repo, root_tree,
+    rc = GitTreeSearch(&old_combine_oid, &tree_link_path, repo, root_tree,
             combine_point);
     if (rc < 0) {
         LOG("The combine point %s does not exist.", combine_point.c_str());
@@ -537,7 +575,7 @@ int GitVCS::Checkout(const String& repo_pathname,
     git_oid commit_oid;
     git_commit *commit;
     git_tree *commit_tree;
-    git_object *relative_root;
+    const git_oid *relative_id;
 
     // Step 1: Open repository
     //
@@ -572,24 +610,24 @@ int GitVCS::Checkout(const String& repo_pathname,
     // Step 4: Find the root at the relative path
     //
 
-    rc = GitTreeSearch(&relative_root, NULL, repo,
-            commit_tree, relative_path);
+    rc = GitTreeSearch(&relative_id, NULL, repo, commit_tree, relative_path);
+
     if (rc < 0) {
         LOG("Failure: Path %s does not exist.", relative_path.c_str());
         return rc;
     }
-    if (relative_root == NULL) {
+
+    if (relative_id == NULL) {
         LOG("Failure: Cannot find path %s.", relative_path.c_str());
         return rc;
     }
 
-    const git_oid *relative_id = git_object_id(relative_root);
     char buf[10000];
     git_oid_tostr(buf, 10000, relative_id);
     DBG("Relative root is %s", buf);
 
     // Step 5: Overwrite files in destination
-    rc = GitObjectWrite(repo, relative_root, destination_path);
+    rc = GitObjectWrite(repo, relative_id, destination_path);
     if (rc < 0) {
         LOG("Failure: Cannot write into %s", destination_path.c_str());
         return rc;

@@ -88,7 +88,7 @@ int cmd_link(const Vector<String> &args)
         LOG("Cannot establish connection to the server.");
         return 0;
     }
-    rc = client->Checkout(args[1], args[2], args[3], head_id);
+    rc = client->Checkout(args[1], args[2].substr(1), args[3], head_id);
     if (rc < 0) {
         LOG("Cannot checkout the specified repository.");
         return 0;
@@ -123,7 +123,7 @@ int cmd_commit(const Vector<String>& args)
         LOG("Cannot establish connection to the server.");
         return 0;
     }
-    rc = client->Commit(args[1], args[2], args[3], head_id);
+    rc = client->Commit(args[1], args[2].substr(1), args[3], head_id);
     if (rc < 0) {
         LOG("Cannot checkout the specified repository.");
         return 0;
