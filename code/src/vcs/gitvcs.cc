@@ -47,7 +47,7 @@ void PrintTree(git_tree *tree)
     printf("\n");
 }
 
-String GitTreeEntryName::ToString()
+String GitTreeEntryName::ToString() const
 {
     // Use "/" to divide different attributes of a file.
     // Since "/" is forbidden in Linux filenames.
@@ -79,7 +79,7 @@ int GitTreeEntryName::FromString(const String& str)
     return 0;
 }
 
-int GitTreeEntryName::Init(const String& filename, struct stat* stat)
+int GitTreeEntryName::Init(const String& filename, const struct stat* stat)
 {
     assert(stat != NULL);
 
@@ -106,11 +106,8 @@ int GitTreeEntryName::Init(const String& filename, struct stat* stat)
     group = group_info->gr_name;
 }
 
-int GitTreeEntryName::WriteToFile(const String& filepath)
+int GitTreeEntryName::WriteToFile(const String& filepath) const
 {
-    // Set mode
-    chmod(filepath.c_str(), mode);
-
     // Get uid and gid
     struct passwd *password_info = getpwnam(user.c_str());
     struct group *group_info = getgrnam(group.c_str());
@@ -126,6 +123,9 @@ int GitTreeEntryName::WriteToFile(const String& filepath)
                 filepath.c_str(), group.c_str());
         return -1;
     }
+
+    // Set mode
+    chmod(filepath.c_str(), mode);
 
     // Set owner
     chown(filepath.c_str(), password_info->pw_uid, group_info->gr_gid);
@@ -143,7 +143,7 @@ GitTreeEntryName::GitTreeEntryName(const String& str)
     FromString(str);
 }
 
-GitTreeEntryName::GitTreeEntryName(const String& name, struct stat* stat)
+GitTreeEntryName::GitTreeEntryName(const String& name, const struct stat* stat)
 {
     Init(name, stat);
 }
@@ -181,6 +181,12 @@ int GitVCS::GetChangeList(const String& repo_pathname,
     return 0;
 }
 
+const git_tree_entry * GitTreeEntrySearchByName(git_tree *tree, const String& filename)
+{
+    // TODO implement
+    return 0;
+}
+
 int GitTreeSearch(git_object **relative_object,
         Vector<git_tree *> *tree_link_path,
         git_repository *repo,
@@ -205,7 +211,7 @@ int GitTreeSearch(git_object **relative_object,
         LOG("next str: %s", relative_path_splitted[i].c_str());
 
         // Step 1: Find the tree entry
-        tree_entry = git_tree_entry_byname(current_tree, relative_path_splitted[i].c_str());
+        tree_entry = GitTreeEntrySearchByName(current_tree, relative_path_splitted[i]);
         if (tree_entry == NULL) {
             LOG("path name not found: %s", relative_path_splitted[i].c_str());
             return -1;
@@ -245,14 +251,16 @@ int GitTreeSearch(git_object **relative_object,
     return 0;
 }
 
-int GitBlobWrite(git_repository *repo, git_blob *blob, const String& destination)
+int GitBlobWrite(git_repository *repo, git_blob *blob, const String& destination,
+        const GitTreeEntryName &name)
 {
     const void *buf = git_blob_rawcontent(blob);
     size_t size = git_blob_rawsize(blob);
 
-    std::ofstream fout(destination.c_str());
-    fout.write((char *)buf, size);
-    fout.close();
+    FILE *file = fopen(destination.c_str(), "w");
+    fwrite((char *)buf, size, 1, file);
+    fclose(file);
+    name.WriteToFile(destination);
 
     return 0;
 }
@@ -260,6 +268,7 @@ int GitBlobWrite(git_repository *repo, git_blob *blob, const String& destination
 struct GitTreeWriteCallbackPayload {
     git_repository *repo;
     const String *destination;
+//    GitTreeEntryName info;
 };
 
 int GitTreeWriteCallback(const char *root,
@@ -271,19 +280,27 @@ int GitTreeWriteCallback(const char *root,
     int rc;
     GitTreeWriteCallbackPayload *data =
         static_cast<GitTreeWriteCallbackPayload *> (payload);
+
+    // Step 1 Get FileTreeEntryName
+    const char *entry_name_str = git_tree_entry_name(entry);
+    GitTreeEntryName tree_entry_name;
+    tree_entry_name.FromString(entry_name_str);
+
+    // Step 2 Get child path
     std::ostringstream file_name_stream;
     file_name_stream << *data->destination << "/" << root;
-    file_name_stream << "/" << git_tree_entry_name(entry);
+    file_name_stream << "/" << tree_entry_name.name;
     String file_name = file_name_stream.str();
 
+    // Step 3 Create file/dir for child
     git_otype entry_type = git_tree_entry_type(entry);
     const git_oid *entry_oid;
     git_blob *entry_blob;
 
     switch (entry_type) {
         case GIT_OBJ_TREE:
-            // XXX: Use actual file mode!
             mkdir(file_name.c_str(),  0100755);
+            tree_entry_name.WriteToFile(file_name);
             break;
 
         case GIT_OBJ_BLOB:
@@ -292,7 +309,7 @@ int GitTreeWriteCallback(const char *root,
             if (rc < 0) {
                 LOG("Error in git data structure: blob is not found.");
             }
-            GitBlobWrite(data->repo, entry_blob, file_name);
+            GitBlobWrite(data->repo, entry_blob, file_name, tree_entry_name);
             break;
 
         default:
@@ -309,6 +326,7 @@ int GitTreeWrite(git_repository *repo, git_tree *tree, const String& destination
     struct GitTreeWriteCallbackPayload data;
     data.repo = repo;
     data.destination = &destination;
+//    data.info = name;
     rc = git_tree_walk(tree, GitTreeWriteCallback, GIT_TREEWALK_PRE, &data);
     if (rc < 0) {
         LOG("Cannot write the files into destination. Errorcode = %d", rc);
@@ -326,13 +344,18 @@ int GitObjectWrite(git_repository *repo, git_object *root, const String& destina
     git_tree *root_tree;
     int rc;
 
+    GitTreeEntryName tree_entry_name;
+    struct stat destination_stat;
+
     switch (root_type) {
+
         case GIT_OBJ_TREE:
             root_oid = git_object_id(root);
             rc = git_tree_lookup(&root_tree, repo, root_oid);
             if (rc < 0) {
-                LOG("Error in git data structure: blob is not found.");
+                LOG("Error in git data structure: tree is not found.");
             }
+
             GitTreeWrite(repo, root_tree, destination);
             break;
 
@@ -342,7 +365,11 @@ int GitObjectWrite(git_repository *repo, git_object *root, const String& destina
             if (rc < 0) {
                 LOG("Error in git data structure: blob is not found.");
             }
-            GitBlobWrite(repo, root_blob, destination);
+
+            stat(destination.c_str(), &destination_stat);
+            tree_entry_name.Init(destination, &destination_stat);
+
+            GitBlobWrite(repo, root_blob, destination, tree_entry_name);
             break;
 
         default:
@@ -391,7 +418,6 @@ int CombineObject(git_tree **new_root_tree,
 
         git_treebuilder_create(&tree_builder, current_parent_tree);
 
-        // TODO Check argument 5 later
         git_treebuilder_insert(NULL, tree_builder, current_child_name.c_str(),
                 &current_new_oid, GIT_FILEMODE_TREE);
 
@@ -407,7 +433,7 @@ int CombineObject(git_tree **new_root_tree,
 }
 
 int CreateObjectRecursive(git_oid *source_oid,
-        mode_t *source_mode,
+        struct stat *source_stat,
         git_repository *repo,
         const String& source_path,
         const String& relative_path,
@@ -416,18 +442,19 @@ int CreateObjectRecursive(git_oid *source_oid,
     int rc;
 
     git_oid child_oid;
-    struct stat source_stat;
+    struct stat source_stat_buf;
 
     if (!IsIncluded(relative_path)) {
         return 0;
     }
 
-    stat(source_path.c_str(), &source_stat);
-    if (source_mode != NULL) {
-        *source_mode = source_stat.st_mode;
+    if (source_stat == NULL) {
+        source_stat = &source_stat_buf;
     }
 
-    if (S_ISREG(source_stat.st_mode)) {
+    stat(source_path.c_str(), source_stat);
+
+    if (S_ISREG(source_stat->st_mode)) {
 
         // Create a blob for the file
         rc = git_blob_create_fromdisk(source_oid, repo, source_path.c_str());
@@ -436,7 +463,7 @@ int CreateObjectRecursive(git_oid *source_oid,
             return -1;
         }
 
-    } else if (S_ISDIR(source_stat.st_mode)) {
+    } else if (S_ISDIR(source_stat->st_mode)) {
         DIR *directory = opendir(source_path.c_str());
         struct dirent *directory_entry;
 
@@ -459,19 +486,21 @@ int CreateObjectRecursive(git_oid *source_oid,
             // Create an object for every child
             String child_absolute_path = source_path + '/' + directory_entry->d_name;
             String child_relative_path = relative_path + '/' + directory_entry->d_name;
-            mode_t child_mode;
+            struct stat child_stat;
 
-            rc = CreateObjectRecursive(&child_oid, &child_mode, repo,
+            rc = CreateObjectRecursive(&child_oid, &child_stat, repo,
                     child_absolute_path.c_str(), child_relative_path.c_str(), IsIncluded);
             if (rc < 0) {
                 return rc;
             }
 
+            // Set up tree entry name
+            GitTreeEntryName tree_entry_name;
+            tree_entry_name.Init(directory_entry->d_name, &child_stat);
+
             // Add the child into the tree builder
-            // XXX Do not add the unsupported files
-            // TODO Use actual mode
             rc = git_treebuilder_insert(NULL, tree_builder,
-                    directory_entry->d_name, &child_oid, GIT_FILEMODE_BLOB/*child_mode*/);
+                    tree_entry_name.ToString().c_str(), &child_oid, GIT_FILEMODE_BLOB);
             if (rc < 0) {
                 LOG("Cannot insert object into tree builder for file: %s", child_absolute_path.c_str());
                 return -1;

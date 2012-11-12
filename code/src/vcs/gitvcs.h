@@ -16,14 +16,14 @@ struct GitTreeEntryName {
     String group;
     String name;
 
-    String ToString();
+    String ToString() const;
     int FromString(const String& str);
-    int Init(const String& name, struct stat* stat);
-    int WriteToFile(const String& filepath);
+    int Init(const String& name, const struct stat* stat);
+    int WriteToFile(const String& filepath) const;
 
     GitTreeEntryName();
     GitTreeEntryName(const String& str);
-    GitTreeEntryName(const String& name, struct stat* stat);
+    GitTreeEntryName(const String& name, const struct stat* stat);
 };
 
 // The Interface for a version control system
