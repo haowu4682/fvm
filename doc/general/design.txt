@@ -15,6 +15,7 @@ which allows a user to track the modifications and roll back at any time. It
 does not depend on which actual file system and version control system the user
 is using given those conditions satisfied.
 
+[MW: s/automatical/automatic/g]
 
 
 2. Design
@@ -68,7 +69,7 @@ make a commit for every file change in the file system. There are two factors
 which affect the performance: (1) THe frequency of commitment; (2) The number of
 files in the commitment. We will discuss the two factors below.
 
-The automatical tracing might mess up with some of the VCS command and we will
+The automatic tracing might mess up with some of the VCS command and we will
 also discuss about them below.
 
 
@@ -93,7 +94,7 @@ Full: Trace everything.
 Update: Only trace files and directories already existed in the repository.
 None: Trace nothing.
 
-The tracing level is only used for automatical tracing. The user could always
+The tracing level is only used for automatic tracing. The user could always
 manually add anything to the repository no matter what the tracing level is.
 
 Here is an example config for tracing levels. ##level(path)## defines the
@@ -122,7 +123,7 @@ result, we introduce (full) backtrace mode for the user to choose an action to
 the previous commitment, without modification to the upstream.
 
 The user could use full backtrace mode to checkout all the files from a
-previous commitment. In the full backtrace mode, the automatical commitment is
+previous commitment. In the full backtrace mode, the automatic commitment is
 turned off so that the previous commitment will not be messed up with the
 current upstream. Correspoding the regular mode is called the upstream mode.
 After the backtrace mode the user could choose one of the four operations:
@@ -130,7 +131,7 @@ After the backtrace mode the user could choose one of the four operations:
 [MW: I don't really understand any of the text in the paragraph above.]
 [HW: A new paragraph added.]
 
-(1) ABADON the changes in the backtrace mode, return to the current HEAD.
+(1) ABANDON the changes in the backtrace mode, return to the current HEAD.
 
 (2) REWRITE the current HEAD with changes in the backtrace mode.
 
@@ -139,14 +140,21 @@ After the backtrace mode the user could choose one of the four operations:
 (4) MAKE A BRANCH with changes in the backtrace mode.
 
 No matter which one is chosen, the current state returns to upstream mode and the
-automatical commitment is turned on again.
+automatic commitment is turned on again.
 
 2.3.4 Partial Backtrace Mode
 
 The partial backtrace mode is used to checkout only several files in a previous
 commitment instead of the whole repository. In partial backtrace mode, only the
-files checked-out have their automatical commiment feature turned off.
+files checked-out have their automatic commiment feature turned off.
+In future commitments of the upstream, the version of these files are kept to be
+the version just before the entering the partial backtrace mode.
 Everything else is the same with the regular backtrace mode.
+
+[MW: what happens when only several files are checked out? can those
+files then be part of new commits? (It's hard to tell precisely what
+data model you have in mind.)]
+[HW: See the updated doc]
 
 Since full backtrace mode is just a special case of partial backtrace mode
 where every file in the repository is checked-out. We can use partial backtrace
@@ -431,17 +439,17 @@ most recent content of "link_src", and FVM only needs to turn on automatical
 commitment for the cloned files.
 
 To unlink a package item is even simpler: simply remove all the files in
-link_dst and stop automatical commitment.
+link_dst and stop automatic commitment.
 
 2.4.4.2 Normal Execution
 
-During normal execution, FVM performs automatical commitments just as in 2.3.1 -
+During normal execution, FVM performs automatic commitments just as in 2.3.1 -
 2.3.2. However, different users might need to modify a repository concurrently
 in sharing mode, so we need to do a few things to maintain the repository. Also
 if two users makes commitments to the same file concurrently, there will
 probably be a conflict. The user might need to solve it manually.
 
-When FVM performs an automatical commitment, it first checks if the current HEAD
+When FVM performs an automatic commitment, it first checks if the current HEAD
 in link_src is the same with that in link_dst. If they are the same, FVM simply
 makes a partial commit "PARTIAL_COMMIT repo link_src HEAD link_dst".
 
@@ -677,8 +685,8 @@ returns to the commitment state. In virtual backtrace mode, the upstream is not
 affected, and the commitment snapshot goes to a user-specified location (usually
 an empty directory in the user's repository) called the virtual path.
 
-(2) In regular backtrace mode, the automatical tracing is suspended. In virtual
-backtrace mode, the automatical tracing is still running, except for the
+(2) In regular backtrace mode, the automatic tracing is suspended. In virtual
+backtrace mode, the automatic tracing is still running, except for the
 directory which contains the commitment snapshot.
 
 A typical command for a virtual checkout looks like:

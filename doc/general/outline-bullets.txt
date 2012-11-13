@@ -3,22 +3,43 @@ S2 Motivation
 * Provide a system which provides the following properties.
     - Files in the system are version controlled, with the ability to roll back
       files to previous point.
+[MW: the next two sets of bullets are a bit fuzzy. That's either
+because they're not fully defined or because the problem itself is a
+bit tough to define. That's fine, and in fact could be a challenge
+that we could identify. See below.]
     - Different Users could share files
         # A user could share a subset of another user's files.
         # A user may have no permission to access files that the user does not
           need to share.
     - Users who share files work independently
         # A user is working on the shared files as if no one else is using them.
-        # The changes of different users are seperated recorded.
-        # A user could see the update of other users at some timing (e.g. when
+        # The changes of different users are separately recorded.
+        # A user could see the update of other users at some time (e.g. when
           the user's work has finished, or when the user makes a commitment).
-        # Every user should see the same content when the user "synchronize"
-          with others. In git, "synchronize" means "git fetch" and "git merge".
+        # Every user should see the same content when the user
+          "synchronizes" with others. In git, "synchronize" means "git fetch"
+          and "git merge".
+
+    [MW: try to bring out the technical challenge here, namely that:
+    it's not even clear how to *define* what the system could do, since
+    the notion of "snapshot" that is provided by VC(=version control)
+    seems fundamentally at odds with the notion of fine-grained
+    restrictions that is provided by AC(=access control).
+
+    Perhaps we could state it more concisely: access control and version
+    control appear to be in conflict, so the first technical challenge is to
+    define the right behavior in the first place.]
 
 * Previous systems may provide a part of these features.
     - Automatical snapshot system allows to roll back files.
-    - A network file system allows users to share files (without independency).
+    - A network file system allows users to share files (without independence).
+        [MW: not clear what you mean by "without independence".]
+        [HW: some explanation are added.]
         # It could share a subset of files.
+        # But different users' edition to the same file will mix together.
+        # The system can not roll back one user's modifications while keeping
+          the other users'.
+        # Concurrent Modifications may cause consistency problem.
     - A version control system provides file sharing with independency
         # However, version control system usually cannot provide sharing a
           subset of files.
@@ -30,19 +51,54 @@ S2 Motivation
     - FVM uses underlying network file system to allow file sharing (design.txt:
       S2.1)
     - FVM uses underlying version control system to deal with the "sharing with
-      independency" problem (design.txt:S2.2)
+      independence" problem (design.txt:S2.2)
+      [MW: I'm still not sure I understand the notion of independence,
+      or what problem the technique is responding to.]
+
+[MW: the set of bullets immediately below is a good start. see comments
+for suggestions.]
 
 * The solution also has its own techniques to deal with some challenges
+    - FVM uses partial checkout and partial commit.
+        # A partial checkout is the behavior to checkout a subset of files in a
+          repository to a work directory. All the other files remain the same.
+        # A partial commit is the behavior to commit a subset of files in a work
+          directory to a repository. All the other files will remain the same as
+          the last commit in the repository.
     - FVM uses partial backtrace mode to manage rollback (Challenge: S3.2,
             design.txt:S2.3.3-S2.3.4, S2.4.4.3, S2.4.5)
+        [MW: I still don't truly understand backtrace. what
+        abstractions/data model/formalisms/etc. are at work here? I'm
+        having trouble latching onto something concrete.]
+        # "git checkout && git branch"
+        # Checkout specified commitment for some user-specified files.
+        # FVM stops making automatic commitment for those files. The files in
+          the repository will remain the same as the last commit before the backtrace mode.
+        # FVM makes commitment of those files into a new-generated branch.
+        # FVM allows the user to merge the new-generated branches with the old
+          one when the user wants to. The user could also choose to abandon the
+          modifications.
     - FVM uses packages to manage the record that which files are being shared.
             (design.txt:S2.4.1-S2.4.2)
+        [MW: above is very nice.]
     - FVM uses FVM Daemon to solve the permission problem during sharing.
             (Challenge: S3.3, design.txt:2.4.3-2.4.4)
+        # The FVM Daemon resides on the server side, which has permissions to
+          all users.
+        # FVM Daemon applies partial checkout and partial commit.
+        [MW: it looks like some of the technical meat in this last
+        challenge might be in the partial commit business rather than
+        in the use of a daemon. Using a daemon is not in and of itself
+        an interesting technique. It's what the daemon does. Maybe you
+        could reformulate the challenge slightly?]
 
 
 
 S3 Challenges
+
+[MW: suggest adding an earlier challenge as the first one: defining the
+abstractions that will help the system balance VC and AC. (but I'm not
+sure what solution you have in mind for that.)]
 
 S3.1 The tradeoff between the ability to rollback and the cost to record past
     versions
@@ -84,6 +140,14 @@ S3.2 The definition of "rollback", and the method to allow a user to rollback
 
         # The user can merge the changes of those file into the mainstream after
           the backtrace mode.
+
+        [MW: but how can that merge be done coherently and/or
+        consistently?]
+        [HW: refer to the "backtrace mode" part in S2. The user's changes of
+        these files are not included in the mainstream, so there is no conflict
+        if the user is the only one who can access the repository. If multiple
+        users share the directory, it becomes the problem in S5.]
+
 
 S3.3 The ability for a user to share a subset of another user's files, without
     the permission to access other files of the user.
