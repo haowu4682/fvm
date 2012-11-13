@@ -8,7 +8,8 @@
 // Returns: the number of substrings
 int split(const String& str, // The source string
         const String& delimeters, // The delimeters
-        Vector<String>& str_array) // Output
+        Vector<String>& str_array,
+        int max_count /* = INT_MAX */) // Output
 {
     int start_index = 0, end_index = 0;
     int count = 0;
@@ -19,7 +20,7 @@ int split(const String& str, // The source string
 
     end_index = str.find_first_of(delimeters, start_index);
 
-    while (end_index != String::npos) {
+    while (end_index != String::npos && count < max_count) {
         str_array.push_back(str.substr(start_index, end_index - start_index));
         ++count;
         start_index = end_index + 1;

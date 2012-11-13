@@ -3,6 +3,7 @@
 #ifndef COMMON_UTIL_H__
 #define COMMON_UTIL_H__
 
+#include <climits>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -17,7 +18,8 @@ std::istream& readline(std::istream& is, // the input stream for the command
 // Returns: the number of substrings
 int split(const String& str, // The source string
         const String& delimeters, // The delimeters
-        Vector<String>& str_array); // Output
+        Vector<String>& str_array,
+        int max_count = INT_MAX); // Output
 
 // Is source a prefix of the target?
 bool IsPrefix(const String& source, const String& target);

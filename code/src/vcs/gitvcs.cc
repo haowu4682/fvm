@@ -11,6 +11,8 @@
 #include <sstream>
 #include <string>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <vector>
 
 #include <common/common.h>
@@ -61,9 +63,9 @@ String GitTreeEntryName::ToString() const
     // Since "/" is forbidden in Linux filenames.
     std::ostringstream sout;
 
-    sout << mode << "/"
-         << user << "/"
-         << group << "/"
+    sout << mode << "@"
+         << user << "@"
+         << group << "@"
          << name;
 
     return sout.str();
@@ -72,7 +74,7 @@ String GitTreeEntryName::ToString() const
 int GitTreeEntryName::FromString(const String& str)
 {
     Vector<String> str_array;
-    split(str, "/", str_array);
+    split(str, "@", str_array, 3);
 
     if (str_array.size() < 4) {
         LOG("tree entry name corrupted: %s", str.c_str());
@@ -214,7 +216,27 @@ const git_tree_entry * GitTreeEntrySearchByName(git_tree *tree, const String& fi
     return NULL;
 }
 
-int GitTreeSearch(const git_oid ** relative_oid,
+git_filemode_t GitFileMode(mode_t mode)
+{
+    git_filemode_t git_mode;
+
+    if (S_ISLNK(mode)) {
+        git_mode = GIT_FILEMODE_LINK;
+    } else if (S_ISDIR(mode)) {
+        git_mode = GIT_FILEMODE_TREE;
+    } else if (S_ISREG(mode) && (mode & S_IXUSR)) {
+        git_mode = GIT_FILEMODE_BLOB_EXECUTABLE;
+    } else if (S_ISREG(mode) && (!(mode & S_IXUSR))) {
+        git_mode = GIT_FILEMODE_BLOB;
+    } else {
+        LOG("Unsupported type: %d", mode);
+        git_mode = GIT_FILEMODE_NEW;
+    }
+
+    return git_mode;
+}
+
+int GitTreeSearch(git_oid *relative_oid,
         Vector<git_tree *> *tree_link_path,
         git_repository *repo,
         git_tree *root_tree,
@@ -229,9 +251,9 @@ int GitTreeSearch(const git_oid ** relative_oid,
 
     const git_oid *current_oid;
 
-    *relative_oid = git_tree_id(root_tree);
+    current_oid = git_tree_id(root_tree);
     DBG("OID:");
-    PrintOid(*relative_oid);
+    PrintOid(current_oid);
 
     for (int i = 0; i < relative_path_splitted.size(); ++i) {
         if (tree_link_path != NULL) {
@@ -270,10 +292,12 @@ int GitTreeSearch(const git_oid ** relative_oid,
         }
     }
 
-    *relative_oid = current_oid;
+    if (relative_oid != NULL) {
+        git_oid_cpy(relative_oid, current_oid);
+    }
 
     DBG("RELATIVE OID RESULT:");
-    PrintOid(*relative_oid);
+    PrintOid(relative_oid);
 
     return 0;
 }
@@ -419,11 +443,11 @@ int GitObjectWrite(git_repository *repo, const git_oid *root_oid, const String& 
 int CombineObject(git_tree **new_root_tree,
         git_repository *repo,
         git_tree *root_tree,
-        git_oid combine_object_oid,
+        const git_oid *combine_object_oid,
         const String& combine_point)
 {
     int rc;
-    const git_oid *old_combine_oid;
+    git_oid old_combine_oid;
     Vector<git_tree *> tree_link_path;
 
     // Divide the combine point
@@ -438,11 +462,17 @@ int CombineObject(git_tree **new_root_tree,
         return rc;
     }
 
+    DBG("combine point oid:");
+    PrintOid(&old_combine_oid);
+
     // Recursively modify the tree, up till the root
     git_oid current_new_oid;
     git_tree *current_parent_tree;
     git_treebuilder *tree_builder;
-    current_new_oid = combine_object_oid;
+    git_oid_cpy(&current_new_oid, combine_object_oid);
+
+    DBG("Current New Oid:");
+    PrintOid(&current_new_oid);
 
     if (combine_point_list.size() != tree_link_path.size()) {
         LOG("Unknown error in GitTreeSearch: combine_point_list_size = %ld, "
@@ -451,6 +481,8 @@ int CombineObject(git_tree **new_root_tree,
     }
 
     for (int i = combine_point_list.size() - 1; i >= 0; --i) {
+        DBG("Commit point path: %s", combine_point_list[i].c_str());
+
         current_parent_tree = tree_link_path[i];
         String &current_child_name = combine_point_list[i];
 
@@ -464,8 +496,16 @@ int CombineObject(git_tree **new_root_tree,
         git_treebuilder_free(tree_builder);
     }
 
+    DBG("Current New Oid:");
+    PrintOid(&current_new_oid);
+
     // Return the final root tree
-    git_tree_lookup(new_root_tree, repo, &current_new_oid);
+    rc = git_tree_lookup(new_root_tree, repo, &current_new_oid);
+    if (rc < 0) {
+        LOG("unknown error while retrieving new commit tree for oid");
+        PrintOid(&current_new_oid);
+        return rc;
+    }
 
     return 0;
 }
@@ -501,6 +541,9 @@ int CreateObjectRecursive(git_oid *source_oid,
             return -1;
         }
 
+        DBG("Created blob, oid = ");
+        PrintOid(source_oid);
+
     } else if (S_ISDIR(source_stat->st_mode)) {
         DIR *directory = opendir(source_path.c_str());
         struct dirent *directory_entry;
@@ -529,18 +572,21 @@ int CreateObjectRecursive(git_oid *source_oid,
             rc = CreateObjectRecursive(&child_oid, &child_stat, repo,
                     child_absolute_path.c_str(), child_relative_path.c_str(), IsIncluded);
             if (rc < 0) {
+                DBG("Failure in recursively create the object!");
                 return rc;
             }
 
             // Set up tree entry name
             GitTreeEntryName tree_entry_name;
             tree_entry_name.Init(directory_entry->d_name, &child_stat);
+            git_filemode_t tree_entry_mode = GitFileMode(tree_entry_name.mode);
 
             // Add the child into the tree builder
             rc = git_treebuilder_insert(NULL, tree_builder,
-                    tree_entry_name.ToString().c_str(), &child_oid, GIT_FILEMODE_BLOB);
+                    tree_entry_name.ToString().c_str(), &child_oid, tree_entry_mode);
             if (rc < 0) {
-                LOG("Cannot insert object into tree builder for file: %s", child_absolute_path.c_str());
+                LOG("Cannot insert object into tree builder for file: %s, errno = %d", child_absolute_path.c_str(), rc);
+                DBG("tree entry name: %s", tree_entry_name.ToString().c_str());
                 return -1;
             }
         }
@@ -555,6 +601,9 @@ int CreateObjectRecursive(git_oid *source_oid,
         // Free out the internal data
         git_treebuilder_free(tree_builder);
         closedir(directory);
+
+        DBG("Created tree, oid = ");
+        PrintOid(source_oid);
 
     } else {
         // TODO Support symbolic link.
@@ -575,7 +624,7 @@ int GitVCS::Checkout(const String& repo_pathname,
     git_oid commit_oid;
     git_commit *commit;
     git_tree *commit_tree;
-    const git_oid *relative_id;
+    git_oid relative_id;
 
     // Step 1: Open repository
     //
@@ -617,17 +666,18 @@ int GitVCS::Checkout(const String& repo_pathname,
         return rc;
     }
 
+#if 0
     if (relative_id == NULL) {
         LOG("Failure: Cannot find path %s.", relative_path.c_str());
         return rc;
     }
+#endif
 
-    char buf[10000];
-    git_oid_tostr(buf, 10000, relative_id);
-    DBG("Relative root is %s", buf);
+    DBG("Relative root is");
+    PrintOid(&relative_id);
 
     // Step 5: Overwrite files in destination
-    rc = GitObjectWrite(repo, relative_id, destination_path);
+    rc = GitObjectWrite(repo, &relative_id, destination_path);
     if (rc < 0) {
         LOG("Failure: Cannot write into %s", destination_path.c_str());
         return rc;
@@ -667,7 +717,11 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     }
 
     // Step 2: Create partial tree
-    CreateObjectRecursive(&partial_oid, NULL, repo, work_dir, relative_path, IsIncluded);
+    rc = CreateObjectRecursive(&partial_oid, NULL, repo, work_dir, relative_path, IsIncluded);
+    if (rc < 0) {
+        LOG("Failed to create the partial tree!");
+        return rc;
+    }
 
 #if 0
     // DEBUG CODE
@@ -681,6 +735,9 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     }
     // DEBUG CODE ENDS
 #endif
+
+    DBG("Partial id is:");
+    PrintOid(&partial_oid);
 
     // Step 3: Create commit tree
     rc = git_oid_fromstr(&old_commit_oid, old_commit_id.c_str());
@@ -704,7 +761,11 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     DBG("Old commit tree is:");
     PrintTree(old_commit_tree);
 
-    CombineObject(&new_commit_tree, repo, old_commit_tree, partial_oid, relative_path);
+    rc = CombineObject(&new_commit_tree, repo, old_commit_tree, &partial_oid, relative_path);
+    if (rc < 0) {
+        LOG("Failed to combine old commit with the new one!");
+        return rc;
+    }
 
     DBG("New commit tree is:");
     PrintTree(new_commit_tree);
