@@ -41,6 +41,7 @@ class FVMClient {
 
         // Retrieve the head of a repository
         int RetrieveHead(const String &repo_path, String &head_out);
+        int RetrieveHead(const String &repo_path, const String& branch_name, String &head_out);
 
     private:
         // Basic server data

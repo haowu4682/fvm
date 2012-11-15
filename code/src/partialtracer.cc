@@ -17,7 +17,11 @@ PartialTracer::PartialTracer(const String& repo, const String& link_src,
     client_ = client;
 }
 
-void PartialTracer::PartialCommit()
+int PartialTracer::Commit()
+{
+}
+
+int PartialTracer::Commit(const String& branch_name)
 {
     int rc;
 
@@ -25,65 +29,59 @@ void PartialTracer::PartialCommit()
     rc = client_->Connect();
     if (rc < 0) {
         LOG("Cannot establish connection to the server.");
-        return;
+        return rc;
     }
 
     rc = client_->RetrieveHead(config_.repo_path(), head_id);
     if (rc < 0) {
         LOG("Cannot retrieve HEAD status.");
-        return;
+        return rc;
     }
 
     rc = client_->Connect();
     if (rc < 0) {
         LOG("Cannot establish connection to the server.");
-        return;
+        return rc;
     }
 
     rc = client_->Commit(config_.repo_path(), relative_path_, link_dst_, head_id, &config_);
     if (rc < 0) {
         LOG("Cannot checkout the specified repository.");
-        return;
+        return rc;
     }
-}
-
-void PartialTracer::Trace()
-{
-    if (running_) {
-#if 0
-        Vector<String> change_list;
-        Vector<String> commit_list;
-        if (vcs != NULL) {
-            vcs->GetChangeList(config_.repo_path(), change_list);
-
-            for (Vector<String>::iterator it = change_list.begin();
-                    it != change_list.end(); ++it) {
-                if (config_.GetTraceLevel(*it) != kNone) {
-                    commit_list.push_back(*it);
-                }
-            }
-        }
-#endif
-        PartialCommit();
-    }
-
-    sleep(config_.time_interval_s());
-}
-
-#if 0
-int cmd_partial_tracer_start(const Vector<String>& args)
-{
-    // Step 1: Read in config
-    // TODO Read in config
-
-    // Step 2: Initialize tracer
-    // TODO <repo, link_src, link_dst>
-    Tracer* tracer = new PartialTracer;
-
-    // Step 3: Start the tracer
-    tracer->Start();
 
     return 0;
 }
-#endif
+
+int PartialTracer::Checkout(const String& branch_name)
+{
+    int rc;
+
+    // Usage: link REPO LINK_SRC LINK_DST
+    String head_id;
+    rc = client_->Connect();
+    if (rc < 0) {
+        LOG("Cannot establish connection to the server.");
+        return 0;
+    }
+
+    rc = client_->RetrieveHead(config_.repo_path(), branch_name, head_id);
+    if (rc < 0) {
+        LOG("Cannot retrieve HEAD status.");
+        return 0;
+    }
+
+    rc = client_->Connect();
+    if (rc < 0) {
+        LOG("Cannot establish connection to the server.");
+        return 0;
+    }
+    rc = client_->Checkout(config_.repo_path(), relative_path_, link_dst_, head_id);
+    if (rc < 0) {
+        LOG("Cannot checkout the specified repository.");
+        return 0;
+    }
+
+    return 0;
+}
 

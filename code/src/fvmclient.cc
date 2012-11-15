@@ -126,3 +126,27 @@ int FVMClient::RetrieveHead(const String &repo_path, String &head_out)
     return 0;
 }
 
+// Retrieve the head of a repository
+int FVMClient::RetrieveHead(const String &repo_path, const String& branch_name, String &head_out)
+{
+    // XXX: Magic number
+    char buf[1096];
+    std::ostringstream command_sout;
+    command_sout << "GETHEAD " << repo_path << " " << branch_name;
+    String command_line = command_sout.str();
+
+    int rc = write(sockfd_, command_line.c_str(), command_line.size());
+    if (rc < 0) {
+        LOG("Failed to send command to the server: %s", command_line.c_str());
+    }
+
+    rc = read(sockfd_, buf, 1096);
+    if (rc < 0) {
+        LOG("Failed to read reply from the server for command: %s", command_line.c_str());
+    }
+    LOG("head commit = %s", buf);
+
+    head_out = buf;
+
+    return 0;
+}

@@ -49,23 +49,87 @@ void Tracer::Init()
 void Tracer::Trace()
 {
     if (running_) {
-        Vector<String> change_list;
-        Vector<String> commit_list;
-        if (vcs != NULL) {
-            vcs->GetChangeList(config_.repo_path(), change_list);
-
-            for (Vector<String>::iterator it = change_list.begin();
-                    it != change_list.end(); ++it) {
-                if (config_.GetTraceLevel(*it) != kNone) {
-                    commit_list.push_back(*it);
-                }
-            }
-
-            vcs->Commit(config_.repo_path(), commit_list);
-        }
+        Commit();
     }
 
     sleep(config_.time_interval_s());
+}
+
+// Start backtrace
+int Tracer::StartBackTrace(const String& branch_name, const String& pathname)
+{
+    branch_manager_.Add(branch_name, pathname);
+    return 0;
+}
+
+// End backtrace
+int Tracer::StopBackTrace(const String& branch_name, BacktraceMergeChoice merge_choice)
+{
+    switch(merge_choice) {
+        case kAbandon:
+            Abandon(branch_manager_.default_branch_name(), branch_name);
+            break;
+        case kOverwrite:
+            Overwrite(branch_manager_.default_branch_name(), branch_name);
+            break;
+        case kMerge:
+            Merge(branch_manager_.default_branch_name(), branch_name);
+            break;
+        default:
+            LOG("Unknown merge choice: %d", merge_choice);
+    }
+
+    branch_manager_.Remove(branch_name);
+    return 0;
+}
+
+int Tracer::Commit()
+{
+    // TODO New Implementation
+    Vector<String> change_list;
+    Vector<String> commit_list;
+    if (vcs != NULL) {
+        vcs->GetChangeList(config_.repo_path(), change_list);
+
+        for (Vector<String>::iterator it = change_list.begin();
+                it != change_list.end(); ++it) {
+            if (config_.GetTraceLevel(*it) != kNone) {
+                commit_list.push_back(*it);
+            }
+        }
+
+        vcs->Commit(config_.repo_path(), commit_list);
+    }
+}
+
+int Tracer::Checkout(const String& branch_name)
+{
+    // TODO Implement
+}
+
+int Tracer::Abandon(const String& old_branch, const String& new_branch)
+{
+    // XXX Only good when old_branch = master!
+    branch_manager_.Remove(new_branch);
+    Checkout(new_branch);
+    Commit();
+
+    return 0;
+}
+
+int Tracer::Overwrite(const String& old_branch, const String& new_branch)
+{
+    // XXX Only good when old_branch = master!
+    branch_manager_.Remove(new_branch);
+    Commit();
+
+    return 0;
+}
+
+int Tracer::Merge(const String& old_branch, const String& new_branch)
+{
+    // TODO Implement
+    return 0;
 }
 
 int cmd_repo_start(const Vector<String>& args)

@@ -6,8 +6,15 @@
 #include <pthread.h>
 
 #include <common/common.h>
+#include <single/branchmanager.h>
 #include <single/config.h>
 #include <vcs/vcs.h>
+
+enum BacktraceMergeChoice {
+    kAbandon,
+    kOverwrite,
+    kMerge
+};
 
 class Tracer {
     public:
@@ -27,6 +34,12 @@ class Tracer {
         // Stop the tracer
         virtual void Stop();
 
+
+        // Start backtrace
+        virtual int StartBackTrace(const String& branch_name, const String& pathname);
+        // End backtrace
+        virtual int StopBackTrace(const String& branch_name, BacktraceMergeChoice merge_choice);
+
     protected:
         // Whether the tracing is running.
         bool running_;
@@ -37,13 +50,23 @@ class Tracer {
         // The config of the tracer
         RepoConfig config_;
 
-        // Trace selected files using the config in config_
-        void Trace();
         // The friend function is used for pthread only
         friend void * trace_pthread_function(void * /* tracer_void_ptr */);
 
+        // The branch manager
+        BranchManager branch_manager_;
+
         // The version control system
         VersionControlSystem* vcs;
+
+        // Folloing are some functions to be override by children
+        // Trace selected files using the config in config_
+        virtual void Trace();
+        virtual int Commit();
+        virtual int Checkout(const String& branch_name);
+        virtual int Abandon(const String& old_branch, const String& new_branch);
+        virtual int Overwrite(const String& old_branch, const String& new_branch);
+        virtual int Merge(const String& old_branch, const String& new_branch);
 };
 
 #endif // SINGLE_TRACER_H__

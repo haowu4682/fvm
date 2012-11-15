@@ -15,8 +15,15 @@ class PartialTracer : public Tracer {
 
 
     protected:
-        virtual void Trace();
-        void PartialCommit();
+        virtual int Commit();
+        virtual int Commit(const String& branch_name);
+        virtual int Checkout(const String& branch_name);
+
+#if 0
+        virtual void Abandon(const String& old_branch, const String& new_branch);
+        virtual void Overwrite(const String& old_branch, const String& new_branch);
+        virtual void Merge(const String& old_branch, const String& new_branch);
+#endif
 
         String relative_path_;
         String link_dst_;
