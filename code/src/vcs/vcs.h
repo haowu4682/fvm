@@ -23,6 +23,12 @@ class IsIncludeOperator {
         virtual bool operator() (const String& pathname) = 0;
 };
 
+// The Interface for deciding the branch of a specific pathname
+class BranchOperator {
+    public:
+        virtual String operator() (const String& pathname) = 0;
+}
+
 // The Interface for a version control system
 class VersionControlSystem {
     public:
@@ -43,7 +49,8 @@ class VersionControlSystem {
                 const String& old_commit_id,
                 const String& relative_path,
                 const String& work_dir,
-                IsIncludeOperator &IsIncluded) = 0;
+                IsIncludeOperator &IsIncluded,
+                BranchOperator &GetBranch) = 0;
 
         // Checkout a commit
         virtual int Checkout(const String& repo_pathname,
@@ -57,6 +64,11 @@ class VersionControlSystem {
                 String& head_out) = 0;
         virtual int GetHead(const String& repo_pathname,
                 String& head_out) = 0;
+
+        // Create a branch
+        virtual int BranchCreate(const String& repo_name,
+                const String& branch_name,
+                const String& head_commit_id) = 0;
 };
 
 #endif // VCS_VCS_H_

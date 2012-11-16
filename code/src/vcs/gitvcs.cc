@@ -700,7 +700,8 @@ int GitVCS::PartialCommit(const String& repo_pathname,
         const String& old_commit_id,
         const String& relative_path,
         const String& work_dir,
-        IsIncludeOperator &IsIncluded)
+        IsIncludeOperator &IsIncluded,
+        BranchOperator &GetBranch);
 {
     int rc;
     git_repository *repo;
@@ -899,6 +900,47 @@ int GitVCS::GetHead(const String& repo_pathname,
     head_name_out = git_oid_tostr(head_name, GIT_OID_HEXSZ+1, &head_oid);
 
     head_out = head_name_out;
+
+    return 0;
+}
+
+int GitVCS::BranchCreate(const String& repo_name,
+        const String& branch_name,
+        const String& head_commit_id)
+{
+    int rc;
+    git_repository *repo;
+    git_reference *branch;
+    git_object *branch_head_object;
+    git_oid branch_head_oid;
+
+    // Step 1 Open repository
+    rc = git_repository_open(&repo, repo_name.c_str());
+    if (rc < 0) {
+        LOG("Failure: Cannot open repository.");
+        return rc;
+    }
+
+    // Step 2 Find branch head
+    rc = git_oid_fromstr(&branch_head_oid, head_commit_id.c_str());
+    if (rc < 0) {
+        LOG("Failure: Commit id cannot be found.");
+        return rc;
+    }
+
+    rc = git_object_lookup(&branch_head_object, repo, &branch_head_oid, GIT_OBJ_ANY);
+    if (rc < 0) {
+        LOG("Failure: Commit object cannot be found.");
+        return rc;
+    }
+
+    // Step 3 Create branch
+    rc = git_branch_create(&branch, repo, branch_name.c_str(),
+            branch_head_object, true);
+    if (rc < 0) {
+        LOG("Failure: Cannot create new branch!");
+        return rc;
+    }
 
     return 0;
 }

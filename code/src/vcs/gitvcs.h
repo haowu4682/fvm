@@ -59,7 +59,8 @@ class GitVCS : public VersionControlSystem {
                 const String& old_commit_id,
                 const String& relative_path,
                 const String& work_dir,
-                IsIncludeOperator &IsIncluded);
+                IsIncludeOperator &IsIncluded,
+                BranchOperator &GetBranch);
 
         // Retrieve the HEAD commit
         virtual int GetHead(const String& repo_pathname,
@@ -67,6 +68,11 @@ class GitVCS : public VersionControlSystem {
                 String& head_out);
         virtual int GetHead(const String& repo_pathname,
                 String& head_out);
+
+        // Create a branch
+        virtual int BranchCreate(const String& repo_name,
+                const String& branch_name,
+                const String& head_commit_id);
 
     private:
         String username_;
