@@ -159,21 +159,14 @@ GitTreeEntryName::GitTreeEntryName(const String& name, const struct stat* stat)
     Init(name, stat);
 }
 
-int GetCommitTree(const String& commit_id, git_repository *repo, git_tree **commit_tree)
+int GetCommitTree(const git_oid *commit_oid, git_repository *repo, git_tree **commit_tree)
 {
     int rc;
-    git_oid commit_oid;
     git_commit *commit;
 
     assert(commit_tree != NULL);
 
-    rc = git_oid_fromstr(&commit_oid, commit_id.c_str());
-    if (rc < 0) {
-        LOG("Failure: Commit id cannot be found.");
-        return rc;
-    }
-
-    rc = git_commit_lookup(&commit, repo, &commit_oid);
+    rc = git_commit_lookup(&commit, repo, commit_oid);
     if (rc < 0) {
         LOG("Failure: Commit object cannot be found.");
         return rc;
@@ -452,7 +445,6 @@ int CombineObject(git_tree **new_root_tree,
         const git_oid *combine_object_oid,
         const String& combine_point)
 {
-#if 0
     int rc;
     git_oid old_combine_oid;
     Vector<git_tree *> tree_link_path;
@@ -515,25 +507,43 @@ int CombineObject(git_tree **new_root_tree,
     }
 
     return 0;
-#endif
 }
 
-int CreateObjectRecursive(Map<String, git_oid> &source_oid_map,
+// Create an object for the specific file in the path, recursively.
+// Return: 0 Object created normally.
+//         1 Object not created because it is not included, or not with the name
+//           of the branch.
+//         <0 Error code.
+int CreateObjectRecursive(
+        // Output
+        git_oid *source_oid,
         struct stat *source_stat,
+
+        // Input
         git_repository *repo,
+        const String& branch_name,
         const String& source_path,
         const String& relative_path,
+//        const git_oid *old_object_oid,
+
+        // Operator
         IsIncludeOperator &IsIncluded,
         BranchOperator &GetBranch)
 {
-#if 0
     int rc;
 
     git_oid child_oid;
     struct stat source_stat_buf;
+    String source_branch_name;
 
     if (!IsIncluded(relative_path)) {
-        return 0;
+        return 1;
+    }
+
+    source_branch_name = GetBranch(relative_path);
+
+    if (source_branch_name != branch_name) {
+        return 1;
     }
 
     if (source_stat == NULL) {
@@ -548,7 +558,7 @@ int CreateObjectRecursive(Map<String, git_oid> &source_oid_map,
         rc = git_blob_create_fromdisk(source_oid, repo, source_path.c_str());
         if (rc < 0) {
             LOG("Cannot create a blob for file: %s", source_path.c_str());
-            return -1;
+            return rc;
         }
 
         DBG("Created blob, oid = ");
@@ -579,24 +589,36 @@ int CreateObjectRecursive(Map<String, git_oid> &source_oid_map,
             String child_relative_path = relative_path + '/' + directory_entry->d_name;
             struct stat child_stat;
 
-            rc = CreateObjectRecursive(&child_oid, &child_stat, repo,
-                    child_absolute_path.c_str(), child_relative_path.c_str(), IsIncluded);
+            rc = CreateObjectRecursive(&child_oid, &child_stat, repo, branch_name,
+                    child_absolute_path.c_str(), child_relative_path.c_str(),
+                    IsIncluded, GetBranch);
             if (rc < 0) {
                 DBG("Failure in recursively create the object!");
                 return rc;
             }
 
-            // Set up tree entry name
-            GitTreeEntryName tree_entry_name;
-            tree_entry_name.Init(directory_entry->d_name, &child_stat);
-            git_filemode_t tree_entry_mode = GitFileMode(tree_entry_name.mode);
+            if (rc == 0) {
+                // If the child is created, we shall include it into the tree
+                // builder
 
-            // Add the child into the tree builder
-            rc = git_treebuilder_insert(NULL, tree_builder,
-                    tree_entry_name.ToString().c_str(), &child_oid, tree_entry_mode);
-            if (rc < 0) {
-                LOG("Cannot insert object into tree builder for file: %s, errno = %d", child_absolute_path.c_str(), rc);
-                DBG("tree entry name: %s", tree_entry_name.ToString().c_str());
+                // Set up tree entry name
+                GitTreeEntryName tree_entry_name;
+                tree_entry_name.Init(directory_entry->d_name, &child_stat);
+                git_filemode_t tree_entry_mode = GitFileMode(tree_entry_name.mode);
+
+                // Add the child into the tree builder
+                rc = git_treebuilder_insert(NULL, tree_builder,
+                        tree_entry_name.ToString().c_str(), &child_oid, tree_entry_mode);
+                if (rc < 0) {
+                    LOG("Cannot insert object into tree builder for file: %s, errno = %d", child_absolute_path.c_str(), rc);
+                    DBG("tree entry name: %s", tree_entry_name.ToString().c_str());
+                    return -1;
+                }
+            } else if (rc == 1) {
+                // Otherwise, we shall include the old object
+                // TODO Include the old object
+            } else {
+                LOG("ERROR! UNEXPECTED RETURN VALUE: %d", rc);
                 return -1;
             }
         }
@@ -621,7 +643,6 @@ int CreateObjectRecursive(Map<String, git_oid> &source_oid_map,
     }
 
     return 0;
-#endif
 }
 
 // Get the change list for a specific repository
@@ -662,7 +683,7 @@ int GitVCS::Checkout(const String& repo_pathname,
     int rc;
     git_repository *repo;
     git_tree *commit_tree;
-    git_oid relative_id;
+    git_oid relative_oid, commit_oid;
 
     // Step 1: Open repository
     //
@@ -674,7 +695,13 @@ int GitVCS::Checkout(const String& repo_pathname,
 
     // Step 2: Retrieve the commit tree
     //
-    rc = GetCommitTree(commit_id, repo, &commit_tree);
+    rc = git_oid_fromstr(&commit_oid, commit_id.c_str());
+    if (rc < 0) {
+        LOG("Failure: Commit id cannot be found.");
+        return rc;
+    }
+
+    rc = GetCommitTree(&commit_oid, repo, &commit_tree);
     if (rc < 0) {
         LOG("Failure: Commit tree cannot be found.");
         return rc;
@@ -683,7 +710,7 @@ int GitVCS::Checkout(const String& repo_pathname,
     // Step 3: Find the root at the relative path
     //
 
-    rc = GitTreeSearch(&relative_id, NULL, repo, commit_tree, relative_path);
+    rc = GitTreeSearch(&relative_oid, NULL, repo, commit_tree, relative_path);
 
     if (rc < 0) {
         LOG("Failure: Path %s does not exist.", relative_path.c_str());
@@ -691,10 +718,10 @@ int GitVCS::Checkout(const String& repo_pathname,
     }
 
     DBG("Relative root is");
-    PrintOid(&relative_id);
+    PrintOid(&relative_oid);
 
     // Step 4: Overwrite files in destination
-    rc = GitObjectWrite(repo, &relative_id, destination_path);
+    rc = GitObjectWrite(repo, &relative_oid, destination_path);
     if (rc < 0) {
         LOG("Failure: Cannot write into %s", destination_path.c_str());
         return rc;
@@ -726,10 +753,12 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     int rc;
     git_repository *repo;
     git_signature *author, *committer;
+    // TODO Put this into the parameter
+    String branch_name;
 
-    Map<String, git_oid> partial_oid_map;
-    Map<String, git_tree *> new_commit_tree_map;
-    Map<String, git_commit *> old_commit_map;
+    git_oid partial_oid, old_commit_id, new_commit_id;
+    git_tree *new_commit_tree, *old_commit_tree;
+    git_commit *old_commit, *new_commit;
 
     // Step 1: Open repository
     rc = git_repository_open(&repo, repo_pathname.c_str());
@@ -739,27 +768,44 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     }
 
     // Step 2: Create partial trees
-    rc = CreateObjectRecursive(partial_oid_map, NULL, repo, work_dir, relative_path, IsIncluded, GetBranch);
+    rc = CreateObjectRecursive(&partial_oid, NULL, repo, branch_name,
+            work_dir, relative_path, IsIncluded, GetBranch);
     if (rc < 0) {
         LOG("Failed to create the partial tree!");
         return rc;
     }
 
+    // Step 3: Find old commit id
+    rc = git_reference_name_to_oid(&old_commit_id, repo, branch_name.c_str());
+    if (rc < 0) {
+        LOG("Failure: Cannot retrieve the oid of the HEAD.");
+        return rc;
 #if 0
-    // Step 3: Create commit trees
-    rc = GetCommitTree(old_commit_id, repo, &old_commit_tree);
+        DBG("repo_pathname=%s; branch_name=%s, rc=%d", repo_pathname.c_str(), branch_name.c_str(), rc);
+        git_strarray ref_list;
+        git_reference_list(&ref_list, repo, GIT_REF_LISTALL);
+        for (int i = 0; i < ref_list.count; ++i) {
+            const char *refname = ref_list.strings[i];
+            DBG("refname=%s", refname);
+        }
+#endif
+    }
+
+    // Step 4: Get old commit tree
+    rc = GetCommitTree(&old_commit_id, repo, &old_commit_tree);
     if (rc < 0) {
         LOG("Failure: Commit tree cannot be found.");
         return rc;
     }
 
-    rc = CombineObject(&new_commit_tree_map, repo, old_commit_tree, &partial_oid, relative_path);
+    // Step 5: Create new trees
+    rc = CombineObject(&new_commit_tree, repo, old_commit_tree, &partial_oid, relative_path);
     if (rc < 0) {
         LOG("Failed to combine old commit with the new one!");
         return rc;
     }
 
-    // Step 4: Write commit trees into HEAD
+    // Step 6: Create author and committer information
     rc = git_signature_now(&author, username_.c_str(), user_email_.c_str());
     if (rc < 0) {
         LOG("Failure: Cannot create the author.");
@@ -772,11 +818,11 @@ int GitVCS::PartialCommit(const String& repo_pathname,
         return -1;
     }
 
-//    rc = CreateCommit(repo, author, committer, old_commit, new_commit_tree);
+    // Step 7: Create commit object
     git_commit_create_v(
             &new_commit_id,
             repo,
-            "HEAD",
+            branch_name.c_str(),
             author,
             committer,
             NULL,
@@ -785,16 +831,13 @@ int GitVCS::PartialCommit(const String& repo_pathname,
             1,
             old_commit);
 
-    // Step 5 Free resource
+    // Step 8 Free resource
     git_signature_free(author);
     git_signature_free(committer);
     git_tree_free(old_commit_tree);
-    for (Map<String, git_tree *>::iterator it = new_commit_tree_map.begin();
-            it != new_commit_tree_map.end(); ++it) {
-        git_tree_free(it->second);
-    }
+    git_tree_free(new_commit_tree);
+    git_commit_free(old_commit);
     git_repository_free(repo);
-#endif
 
     return 0;
 }
