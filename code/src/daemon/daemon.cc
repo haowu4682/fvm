@@ -83,15 +83,15 @@ void ResponseForClient(int client_sockfd)
             vcs->username(command_args[5]);
             vcs->user_email(command_args[6]);
             AlwaysTrueAdv AlwaysTrue;
-            vcs->PartialCommit(command_args[1], command_args[2], command_args[3],
-                    command_args[4], AlwaysTrue);
+//            vcs->PartialCommit(command_args[1], command_args[2], command_args[3],
+//                    command_args[4], AlwaysTrue);
         } else {
             TraceLevelManagerAdv manager;
             ParseTraceLevel(command_args, 7, command_args.size(), manager);
             vcs->username(command_args[5]);
             vcs->user_email(command_args[6]);
-            vcs->PartialCommit(command_args[1], command_args[2], command_args[3],
-                    command_args[4], manager);
+//            vcs->PartialCommit(command_args[1], command_args[2], command_args[3],
+//                    command_args[4], manager);
         }
     } else if (command_args[0] == "GETHEAD") {
         // Format GETHEAD repo [branch]

@@ -7,6 +7,7 @@
 #include <git2.h>
 #include <grp.h>
 #include <iostream>
+#include <map>
 #include <pwd.h>
 #include <sstream>
 #include <string>
@@ -158,36 +159,41 @@ GitTreeEntryName::GitTreeEntryName(const String& name, const struct stat* stat)
     Init(name, stat);
 }
 
+int GetCommitTree(const String& commit_id, git_repository *repo, git_tree **commit_tree)
+{
+    int rc;
+    git_oid commit_oid;
+    git_commit *commit;
+
+    assert(commit_tree != NULL);
+
+    rc = git_oid_fromstr(&commit_oid, commit_id.c_str());
+    if (rc < 0) {
+        LOG("Failure: Commit id cannot be found.");
+        return rc;
+    }
+
+    rc = git_commit_lookup(&commit, repo, &commit_oid);
+    if (rc < 0) {
+        LOG("Failure: Commit object cannot be found.");
+        return rc;
+    }
+
+    rc = git_commit_tree(commit_tree, commit);
+    if (rc < 0) {
+        LOG("Failure: Commit tree cannot be found.");
+        return rc;
+    }
+
+    DBG("commit tree is:");
+    PrintTree(*commit_tree);
+}
+
 int ChangeListCallback(const char *pathname_c_str, unsigned status, void* list)
 {
     Vector<String> *change_list = static_cast<Vector<String> *>(list);
 
     change_list->push_back(pathname_c_str);
-    return 0;
-}
-
-// Get the change list for a specific repository
-// Return the number of items to be included in the change list.
-int GitVCS::GetChangeList(const String& repo_pathname,
-        Vector<String>& change_list)
-{
-    int rc;
-    git_repository *repo;
-
-    // Step 1: Open repository
-    //
-    rc = git_repository_open(&repo, repo_pathname.c_str());
-    if (rc < 0) {
-        LOG("Failure: Cannot open repository.");
-        return -1;
-    }
-
-    // Step 2: Analyze files and add into change list
-    git_status_options git_change_list_option;
-    git_change_list_option.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
-    git_change_list_option.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
-        GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
-    git_status_foreach_ext(repo, &git_change_list_option, ChangeListCallback, &change_list);
     return 0;
 }
 
@@ -446,6 +452,7 @@ int CombineObject(git_tree **new_root_tree,
         const git_oid *combine_object_oid,
         const String& combine_point)
 {
+#if 0
     int rc;
     git_oid old_combine_oid;
     Vector<git_tree *> tree_link_path;
@@ -508,15 +515,18 @@ int CombineObject(git_tree **new_root_tree,
     }
 
     return 0;
+#endif
 }
 
-int CreateObjectRecursive(git_oid *source_oid,
+int CreateObjectRecursive(Map<String, git_oid> &source_oid_map,
         struct stat *source_stat,
         git_repository *repo,
         const String& source_path,
         const String& relative_path,
-        IsIncludeOperator &IsIncluded)
+        IsIncludeOperator &IsIncluded,
+        BranchOperator &GetBranch)
 {
+#if 0
     int rc;
 
     git_oid child_oid;
@@ -611,6 +621,36 @@ int CreateObjectRecursive(git_oid *source_oid,
     }
 
     return 0;
+#endif
+}
+
+// Get the change list for a specific repository
+// Return the number of items to be included in the change list.
+int GitVCS::GetChangeList(const String& repo_pathname,
+        Vector<String>& change_list)
+{
+    int rc;
+    git_repository *repo;
+
+    // Step 1: Open repository
+    //
+    rc = git_repository_open(&repo, repo_pathname.c_str());
+    if (rc < 0) {
+        LOG("Failure: Cannot open repository.");
+        return -1;
+    }
+
+    // Step 2: Analyze files and add into change list
+    git_status_options git_change_list_option;
+    git_change_list_option.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+    git_change_list_option.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+        GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+    git_status_foreach_ext(repo, &git_change_list_option, ChangeListCallback, &change_list);
+
+    // Step 3: Free resource
+    git_repository_free(repo);
+
+    return 0;
 }
 
 // Checkout a commit
@@ -621,8 +661,6 @@ int GitVCS::Checkout(const String& repo_pathname,
 {
     int rc;
     git_repository *repo;
-    git_oid commit_oid;
-    git_commit *commit;
     git_tree *commit_tree;
     git_oid relative_id;
 
@@ -634,29 +672,15 @@ int GitVCS::Checkout(const String& repo_pathname,
         return rc;
     }
 
-    // Step 2: Retrieve the commit object
+    // Step 2: Retrieve the commit tree
     //
-    rc = git_oid_fromstr(&commit_oid, commit_id.c_str());
+    rc = GetCommitTree(commit_id, repo, &commit_tree);
     if (rc < 0) {
-        LOG("Failure: Commit id cannot be found.");
+        LOG("Failure: Commit tree cannot be found.");
         return rc;
     }
 
-    rc = git_commit_lookup(&commit, repo, &commit_oid);
-    if (rc < 0) {
-        LOG("Failure: Commit id cannot be found.");
-        return rc;
-    }
-
-    // Step 3: Retrieve the commit tree
-    //
-    rc = git_commit_tree(&commit_tree, commit);
-    if (rc < 0) {
-        LOG("Failure: Commit id cannot be found.");
-        return rc;
-    }
-
-    // Step 4: Find the root at the relative path
+    // Step 3: Find the root at the relative path
     //
 
     rc = GitTreeSearch(&relative_id, NULL, repo, commit_tree, relative_path);
@@ -666,22 +690,19 @@ int GitVCS::Checkout(const String& repo_pathname,
         return rc;
     }
 
-#if 0
-    if (relative_id == NULL) {
-        LOG("Failure: Cannot find path %s.", relative_path.c_str());
-        return rc;
-    }
-#endif
-
     DBG("Relative root is");
     PrintOid(&relative_id);
 
-    // Step 5: Overwrite files in destination
+    // Step 4: Overwrite files in destination
     rc = GitObjectWrite(repo, &relative_id, destination_path);
     if (rc < 0) {
         LOG("Failure: Cannot write into %s", destination_path.c_str());
         return rc;
     }
+
+    // Step 5: Free resource
+    git_tree_free(commit_tree);
+    git_repository_free(repo);
 
     return 0;
 }
@@ -697,18 +718,18 @@ int GitVCS::Commit(const String& repo_pathname,
 // Commit the change into a specific repository, using the old commit id as the
 // base.
 int GitVCS::PartialCommit(const String& repo_pathname,
-        const String& old_commit_id,
         const String& relative_path,
         const String& work_dir,
         IsIncludeOperator &IsIncluded,
-        BranchOperator &GetBranch);
+        BranchOperator &GetBranch)
 {
     int rc;
     git_repository *repo;
-    git_tree *old_commit_tree, *new_commit_tree;
-    git_oid root_oid, partial_oid, old_commit_oid, new_commit_id;
-    git_commit *old_commit;
     git_signature *author, *committer;
+
+    Map<String, git_oid> partial_oid_map;
+    Map<String, git_tree *> new_commit_tree_map;
+    Map<String, git_commit *> old_commit_map;
 
     // Step 1: Open repository
     rc = git_repository_open(&repo, repo_pathname.c_str());
@@ -717,61 +738,28 @@ int GitVCS::PartialCommit(const String& repo_pathname,
         return rc;
     }
 
-    // Step 2: Create partial tree
-    rc = CreateObjectRecursive(&partial_oid, NULL, repo, work_dir, relative_path, IsIncluded);
+    // Step 2: Create partial trees
+    rc = CreateObjectRecursive(partial_oid_map, NULL, repo, work_dir, relative_path, IsIncluded, GetBranch);
     if (rc < 0) {
         LOG("Failed to create the partial tree!");
         return rc;
     }
 
 #if 0
-    // DEBUG CODE
-    git_tree *partial_tree;
-    rc = git_tree_lookup(&partial_tree, repo, &partial_oid);
+    // Step 3: Create commit trees
+    rc = GetCommitTree(old_commit_id, repo, &old_commit_tree);
     if (rc < 0) {
-        DBG("partial_oid is not a tree!");
-    } else {
-        DBG("partial_oid is a tree");
-        PrintTree(partial_tree);
-    }
-    // DEBUG CODE ENDS
-#endif
-
-    DBG("Partial id is:");
-    PrintOid(&partial_oid);
-
-    // Step 3: Create commit tree
-    rc = git_oid_fromstr(&old_commit_oid, old_commit_id.c_str());
-    if (rc < 0) {
-        LOG("Failure: Commit id cannot be found.");
+        LOG("Failure: Commit tree cannot be found.");
         return rc;
     }
 
-    rc = git_commit_lookup(&old_commit, repo, &old_commit_oid);
-    if (rc < 0) {
-        LOG("Failure: Commit id cannot be found.");
-        return rc;
-    }
-
-    rc = git_commit_tree(&old_commit_tree, old_commit);
-    if (rc < 0) {
-        LOG("Failure: Commit id cannot be found.");
-        return rc;
-    }
-
-    DBG("Old commit tree is:");
-    PrintTree(old_commit_tree);
-
-    rc = CombineObject(&new_commit_tree, repo, old_commit_tree, &partial_oid, relative_path);
+    rc = CombineObject(&new_commit_tree_map, repo, old_commit_tree, &partial_oid, relative_path);
     if (rc < 0) {
         LOG("Failed to combine old commit with the new one!");
         return rc;
     }
 
-    DBG("New commit tree is:");
-    PrintTree(new_commit_tree);
-
-    // Step 4: Write commit tree into HEAD
+    // Step 4: Write commit trees into HEAD
     rc = git_signature_now(&author, username_.c_str(), user_email_.c_str());
     if (rc < 0) {
         LOG("Failure: Cannot create the author.");
@@ -784,6 +772,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
         return -1;
     }
 
+//    rc = CreateCommit(repo, author, committer, old_commit, new_commit_tree);
     git_commit_create_v(
             &new_commit_id,
             repo,
@@ -799,7 +788,13 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     // Step 5 Free resource
     git_signature_free(author);
     git_signature_free(committer);
+    git_tree_free(old_commit_tree);
+    for (Map<String, git_tree *>::iterator it = new_commit_tree_map.begin();
+            it != new_commit_tree_map.end(); ++it) {
+        git_tree_free(it->second);
+    }
     git_repository_free(repo);
+#endif
 
     return 0;
 }
