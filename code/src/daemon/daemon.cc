@@ -6,7 +6,7 @@
 #include <netinet/in.h>
 #include <stdio.h>
 #include <string>
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <vector>
@@ -46,7 +46,6 @@ size_t ParseTraceLevel(const Vector<String>& source,
     return index;
 }
 
-// TODO Better naming
 class TraceLevelManagerAdv : public TraceLevelManager, public IsIncludeOperator {
     public:
         virtual bool operator() (const String& pathname);
@@ -76,8 +75,6 @@ size_t ParseBranchManager(const Vector<String>& source,
     return index;
 }
 
-#if 0
-// TODO Better naming
 class BranchManagerAdv : public BranchManager, public BranchOperator {
     public:
         virtual String operator() (const String& pathname);
@@ -87,7 +84,6 @@ String BranchManagerAdv::operator() (const String& pathname)
 {
     return GetBranch(pathname);
 }
-#endif
 
 void ResponseForClient(int client_sockfd)
 {
@@ -137,17 +133,17 @@ void ResponseForClient(int client_sockfd)
                         required_args_size, command_args.size());
             }
 
-            TraceLevelManagerAdv manager;
+            TraceLevelManagerAdv trace_level_manager;
+            BranchManagerAdv branch_manager;
             branch_start_index = ParseTraceLevel(command_args,
-                    trace_level_start_index, trace_level_size, manager);
-            // TODO Read into branchmanager
+                    trace_level_start_index, trace_level_size, trace_level_manager);
+            ParseBranchManager(command_args, branch_start_index, branch_manager_size, branch_manager);
 
             vcs->username(author_name);
             vcs->user_email(author_email);
 
-            // TODO Modify this to match new implementation
-            vcs->PartialCommit(command_args[1], command_args[2], command_args[3],
-                    command_args[4], manager);
+            vcs->PartialCommit(repo_name, branch_name, relative_path, source_path,
+                    trace_level_manager, branch_manager);
         }
     } else if (command_args[0] == "GETHEAD") {
         // Format GETHEAD repo [branch]
