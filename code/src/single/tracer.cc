@@ -56,14 +56,14 @@ void Tracer::Trace()
 }
 
 // Start backtrace
-int Tracer::StartBackTrace(const String& branch_name, const String& pathname)
+int Tracer::StartBacktrace(const String& branch_name, const String& pathname)
 {
     branch_manager_.Add(branch_name, pathname);
     return 0;
 }
 
 // End backtrace
-int Tracer::StopBackTrace(const String& branch_name, BacktraceMergeChoice merge_choice)
+int Tracer::StopBacktrace(const String& branch_name, BacktraceMergeChoice merge_choice)
 {
     switch(merge_choice) {
         case kAbandon:

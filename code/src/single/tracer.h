@@ -34,11 +34,13 @@ class Tracer {
         // Stop the tracer
         virtual void Stop();
 
+        // Manually make a commit
+        virtual int Commit();
 
         // Start backtrace
-        virtual int StartBackTrace(const String& branch_name, const String& pathname);
+        virtual int StartBacktrace(const String& branch_name, const String& pathname);
         // End backtrace
-        virtual int StopBackTrace(const String& branch_name, BacktraceMergeChoice merge_choice);
+        virtual int StopBacktrace(const String& branch_name, BacktraceMergeChoice merge_choice);
 
     protected:
         // Whether the tracing is running.
@@ -62,7 +64,6 @@ class Tracer {
         // Folloing are some functions to be override by children
         // Trace selected files using the config in config_
         virtual void Trace();
-        virtual int Commit();
         virtual int Checkout(const String& branch_name);
         virtual int Abandon(const String& old_branch, const String& new_branch);
         virtual int Overwrite(const String& old_branch, const String& new_branch);

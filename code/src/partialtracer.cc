@@ -19,12 +19,21 @@ PartialTracer::PartialTracer(const String& repo, const String& link_src,
 
 int PartialTracer::Commit()
 {
+    const Map<String, String>& branch_map = branch_manager_.branch_map();
+
+    for (Map<String, String>::const_iterator it = branch_map.begin();
+            it != branch_map.end(); ++it) {
+        Commit(it->first);
+    }
+
+    Commit(branch_manager_.default_branch_name());
 }
 
 int PartialTracer::Commit(const String& branch_name)
 {
     int rc;
 
+#if 0
     String head_id;
     rc = client_->Connect();
     if (rc < 0) {
@@ -37,6 +46,7 @@ int PartialTracer::Commit(const String& branch_name)
         LOG("Cannot retrieve HEAD status.");
         return rc;
     }
+#endif
 
     rc = client_->Connect();
     if (rc < 0) {
@@ -44,9 +54,10 @@ int PartialTracer::Commit(const String& branch_name)
         return rc;
     }
 
-    rc = client_->Commit(config_.repo_path(), relative_path_, link_dst_, head_id, &config_);
+    rc = client_->Commit(config_.repo_path(), relative_path_, link_dst_,
+            branch_name, &config_, &branch_manager_);
     if (rc < 0) {
-        LOG("Cannot checkout the specified repository.");
+        LOG("Cannot commit to the specified repository.");
         return rc;
     }
 

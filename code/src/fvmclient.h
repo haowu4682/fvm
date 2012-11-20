@@ -6,6 +6,7 @@
 #include <string>
 
 #include <common/common.h>
+#include <single/branchmanager.h>
 #include <single/config.h>
 
 class FVMClient {
@@ -37,7 +38,7 @@ class FVMClient {
         // Make a partial commit call to the daemon
         int Commit(const String &repo_path, const String &link_src,
                 const String &link_dst, const String &old_commit_id,
-                RepoConfig *config = NULL);
+                RepoConfig *config = NULL, BranchManager *branch_manager = NULL);
 
         // Retrieve the head of a repository
         int RetrieveHead(const String &repo_path, String &head_out);

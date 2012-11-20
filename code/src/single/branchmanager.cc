@@ -46,16 +46,3 @@ String BranchManager::GetBranch(const String& path) const
     return current_name;
 }
 
-int cmd_repo_backtrace(const Vector<String> &args)
-{
-    if (args.size() < 2) {
-        printf("Usage: backtrace path_to_backtrace");
-        return -1;
-    }
-
-    // TODO Implement
-
-    return 0;
-}
-
-

@@ -74,23 +74,43 @@ int FVMClient::Checkout(const String &repo_path, const String &link_src,
 
 // Make a partial commit call to the daemon
 int FVMClient::Commit(const String &repo_path, const String &link_src,
-        const String &link_dst, const String &old_commit_id, RepoConfig *config /* = NULL */)
+        const String &link_dst, const String &branch_name,
+        RepoConfig *config /* = NULL */, BranchManager *branch_manager /* = NULL */)
 {
     std::ostringstream command_sout;
+    const Map<String, TraceLevel>* trace_level_map;
+    const Map<String, String>* branch_map;
+
     command_sout << "COMMIT " << repo_path << ' '
-                 << old_commit_id << ' '
+                 << branch_name << ' '
                  << link_src << ' '
                  << link_dst << ' '
                  << username_ << ' '
                  << user_email_;
     if (config != NULL) {
-        const Map<String, TraceLevel>* trace_level_map = config->trace_level_map();
+        trace_level_map = config->trace_level_map();
+    }
+
+    if (branch_manager != NULL) {
+        branch_map = &branch_manager->branch_map();
+    }
+
+    if (config != NULL) {
         for (Map<String, TraceLevel>::const_iterator it = trace_level_map->begin();
                 it != trace_level_map->end(); ++it) {
             command_sout << ' ' << it->first
                          << ' ' << it->second;
         }
     }
+
+    if (branch_manager != NULL) {
+        for (Map<String, String>::const_iterator it = branch_map->begin();
+                it != branch_map->end(); ++it) {
+            command_sout << ' ' << it->first
+                         << ' ' << it->second;
+        }
+    }
+
     String command_line = command_sout.str();
 
     int rc = write(sockfd_, command_line.c_str(), command_line.size());

@@ -13,6 +13,7 @@
 
 #include <common/common.h>
 #include <common/util.h>
+#include <single/branchmanager.h>
 #include <single/config.h>
 #include <vcs/gitvcs.h>
 #include <vcs/vcs.h>
@@ -25,17 +26,24 @@ class AlwaysTrueAdv : public IsIncludeOperator {
     }
 };
 
-void ParseTraceLevel(const Vector<String>& source,
-        size_t begin_index, size_t end_size,
+size_t ParseTraceLevel(const Vector<String>& source,
+        size_t begin_index, int num,
         TraceLevelManager &manager)
 {
-    for (size_t i = begin_index; i < end_size - 1; i = i + 2) {
-        String pathname = source[i];
-        String levelname = source[i+1];
-        //TraceLevel level = TraceLevelManager::GetTraceLevelFromString(levelname);
+    int count, index;
+    index = begin_index;
+
+    for (count = 0; count < num; ++count) {
+        String pathname = source[index];
+        String levelname = source[index+1];
+
         TraceLevel level = (TraceLevel) atoi(levelname.c_str());
         manager.AddTraceLevelItem(pathname, level);
+
+        index += 2;
     }
+
+    return index;
 }
 
 // TODO Better naming
@@ -49,6 +57,38 @@ bool TraceLevelManagerAdv::operator() (const String& pathname)
     return GetTraceLevel(pathname) != kNone;
 }
 
+size_t ParseBranchManager(const Vector<String>& source,
+        size_t begin_index, int num,
+        BranchManager &manager)
+{
+    int count, index;
+    index = begin_index;
+
+    for (count = 0; count < num; ++count) {
+        String pathname = source[index];
+        String branch_name = source[index+1];
+
+        manager.Add(pathname, branch_name);
+
+        index += 2;
+    }
+
+    return index;
+}
+
+#if 0
+// TODO Better naming
+class BranchManagerAdv : public BranchManager, public BranchOperator {
+    public:
+        virtual String operator() (const String& pathname);
+};
+
+String BranchManagerAdv::operator() (const String& pathname)
+{
+    return GetBranch(pathname);
+}
+#endif
+
 void ResponseForClient(int client_sockfd)
 {
     size_t size;
@@ -56,7 +96,6 @@ void ResponseForClient(int client_sockfd)
 
     // Read in the command from the client
     size = read(client_sockfd, buffer, PATH_MAX + 100);
-
 
     // Parse the command
     String buffer_str(buffer, size);
@@ -76,20 +115,37 @@ void ResponseForClient(int client_sockfd)
                     command_args[4]);
         }
     } else if (command_args[0] == "COMMIT") {
-        // Format: COMMIT repo old_commit_id relative_path source_path author email
-        if (command_args.size() < 7) {
+        // Format: COMMIT repo branch_name relative_path source_path author email
+        // num_of_tracelevel num_of_branch [path level]* [path branch]*
+        if (command_args.size() < 9) {
             LOG("Format error for COMMIT command.");
-        } else if (command_args.size() == 7) {
-            vcs->username(command_args[5]);
-            vcs->user_email(command_args[6]);
-            AlwaysTrueAdv AlwaysTrue;
-            vcs->PartialCommit(command_args[1], command_args[2], command_args[3],
-                    command_args[4], AlwaysTrue);
         } else {
+            String& repo_name = command_args[1];
+            String& branch_name = command_args[2];
+            String& relative_path = command_args[3];
+            String& source_path = command_args[4];
+            String& author_name = command_args[5];
+            String& author_email = command_args[6];
+            int trace_level_size = atoi(command_args[7].c_str());
+            int branch_manager_size = atoi(command_args[8].c_str());
+
+            size_t branch_start_index, trace_level_start_index = 9;
+
+            int required_args_size = 9 + 2 * (trace_level_size + branch_manager_size);
+            if (command_args.size() < required_args_size) {
+                LOG("Command args not enough! Required:%d, Given: %ld",
+                        required_args_size, command_args.size());
+            }
+
             TraceLevelManagerAdv manager;
-            ParseTraceLevel(command_args, 7, command_args.size(), manager);
-            vcs->username(command_args[5]);
-            vcs->user_email(command_args[6]);
+            branch_start_index = ParseTraceLevel(command_args,
+                    trace_level_start_index, trace_level_size, manager);
+            // TODO Read into branchmanager
+
+            vcs->username(author_name);
+            vcs->user_email(author_email);
+
+            // TODO Modify this to match new implementation
             vcs->PartialCommit(command_args[1], command_args[2], command_args[3],
                     command_args[4], manager);
         }
