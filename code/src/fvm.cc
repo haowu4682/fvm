@@ -14,7 +14,8 @@
 #include <common/commands.h>
 #include <common/util.h>
 
-FVMClient *client;
+FVMClient *client = NULL;
+PartialTracer *tracer = NULL;
 
 int cmd_help(const Vector<String>& args);
 
@@ -57,40 +58,13 @@ int cmd_link(const Vector<String> &args)
 {
     int rc;
 
-    // Usage: link REPO LINK_SRC LINK_DST
     if (args.size() < 4) {
         printf("Usage: link repository link_src link_dst\n");
         return 0;
     }
 
-#if 0
-    if (!client->connected()) {
-        printf("Please connect to the server first.\n");
-        return 0;
-    }
-#endif
-
-    String head_id;
-    rc = client->Connect();
-    if (rc < 0) {
-        LOG("Cannot establish connection to the server.");
-        return 0;
-    }
-
-    rc = client->RetrieveHead(args[1], head_id);
-    if (rc < 0) {
-        LOG("Cannot retrieve HEAD status.");
-        return 0;
-    }
-
-    rc = client->Connect();
-    if (rc < 0) {
-        LOG("Cannot establish connection to the server.");
-        return 0;
-    }
-    rc = client->Checkout(args[1], args[2].substr(1), args[3], head_id);
-    if (rc < 0) {
-        LOG("Cannot checkout the specified repository.");
+    if (tracer != NULL) {
+        printf("A tracer already exists! stop the program and try again.");
         return 0;
     }
 
@@ -105,29 +79,60 @@ int cmd_commit(const Vector<String>& args)
 {
     int rc;
 
-    String head_id;
-    rc = client->Connect();
-    if (rc < 0) {
-        LOG("Cannot establish connection to the server.");
+    if (tracer == NULL) {
+        printf("Use the 'link' command to create a link first!\n");
         return 0;
     }
 
-    rc = client->RetrieveHead(args[1], head_id);
-    if (rc < 0) {
-        LOG("Cannot retrieve HEAD status.");
+    tracer->Commit();
+
+    return 0;
+}
+
+int cmd_repo_backtrace_start(const Vector<String> &args)
+{
+    if (args.size() < 3 || args[2] == "master") {
+        printf("Usage: backtrace path_to_backtrace branch_name\n");
+        printf("branch_name cannot be 'master'");
+        return -1;
+    }
+
+    if (tracer == NULL) {
+        printf("Use the 'link' command to create a link first!\n");
         return 0;
     }
 
-    rc = client->Connect();
-    if (rc < 0) {
-        LOG("Cannot establish connection to the server.");
+    tracer->StartBacktrace(args[2], args[1]);
+
+    return 0;
+}
+
+int cmd_repo_backtrace_stop(const Vector<String> &args)
+{
+    if (args.size() < 3 || args[2] == "master") {
+        printf("Usage: backtrace branch_name merge_choice\n");
+        printf("branch_name cannot be 'master'\n");
+        return -1;
+    }
+
+    if (tracer == NULL) {
+        printf("Use the 'link' command to create a link first!\n");
         return 0;
     }
-    rc = client->Commit(args[1], args[2].substr(1), args[3], head_id);
-    if (rc < 0) {
-        LOG("Cannot checkout the specified repository.");
-        return 0;
+
+    BacktraceMergeChoice choice;
+
+    if (args[2] == "abondon") {
+        choice = kAbandon;
+    } else if (args[2] == "overwrite") {
+        choice = kOverwrite;
+    } else if (args[2] == "merge") {
+        choice = kMerge;
+    } else {
+        printf("Unknown merge_choice, Aborted.");
     }
+
+    tracer->StopBacktrace(args[1], choice);
 
     return 0;
 }
@@ -139,15 +144,12 @@ struct cmd_t {
 };
 
 struct cmd_t fvm_commands[] = {
-    // Single user mode command
-    { "start", cmd_repo_start, "start automatical tracing"},
-    { "backtrace", cmd_repo_backtrace, "enter backtrace mode"},
-
     // Sharing mode command
     { "server", cmd_connect, "Set up the server information"},
     { "link", cmd_link, "Link a repository to a specified destination"},
     { "commit", cmd_commit, "Manually make a commitment"},
-    //{ "checkout", cmd_checkout},
+    { "backtrace-start", cmd_repo_backtrace_start, "enter backtrace mode for a specific path"},
+    { "backtrace-stop", cmd_repo_backtrace_stop, "exit backtrace mode for a specific path"},
 
     // Universal command
     { "help", cmd_help, "List help information" },
@@ -217,7 +219,7 @@ int main(int argc, char **argv)
     Vector<String> command_args;
 
     if (argc < 3) {
-        printf("Usage: fvm user_name user_email");
+        printf("Usage: fvm user_name user_email\n");
         return 0;
     }
 

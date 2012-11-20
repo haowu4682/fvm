@@ -19,6 +19,14 @@ PartialTracer::PartialTracer(const String& repo, const String& link_src,
 
 int PartialTracer::Commit()
 {
+    const Map<String, String>& branch_map = branch_manager_.branch_map();
+
+    for (Map<String, String>::const_iterator it = branch_map.begin();
+            it != branch_map.end(); ++it) {
+        Commit(it->first);
+    }
+
+    Commit(branch_manager_.default_branch_name());
 }
 
 int PartialTracer::Commit(const String& branch_name)

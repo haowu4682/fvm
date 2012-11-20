@@ -12,10 +12,9 @@ class PartialTracer : public Tracer {
         PartialTracer(const String& repo, const String& link_src,
                 const String& link_dst, FVMClient *client);
 
-
+        virtual int Commit();
 
     protected:
-        virtual int Commit();
         virtual int Commit(const String& branch_name);
         virtual int Checkout(const String& branch_name);
 
