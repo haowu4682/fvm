@@ -46,6 +46,7 @@ class VersionControlSystem {
 
         // Partial commit into a repository according to the work dir
         virtual int PartialCommit(const String& repo_pathname,
+                const String& branch_name,
                 const String& relative_path,
                 const String& work_dir,
                 IsIncludeOperator &IsIncluded,

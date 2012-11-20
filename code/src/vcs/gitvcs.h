@@ -56,6 +56,7 @@ class GitVCS : public VersionControlSystem {
 
         // Partial commit
         virtual int PartialCommit(const String& repo_pathname,
+                const String& branch_name,
                 const String& relative_path,
                 const String& work_dir,
                 IsIncludeOperator &IsIncluded,

@@ -192,8 +192,6 @@ int ChangeListCallback(const char *pathname_c_str, unsigned status, void* list)
 
 const git_tree_entry * GitTreeEntrySearchByName(git_tree *tree, const String& filename)
 {
-    // TODO implement
-    //
     unsigned tree_size;
     const git_tree_entry *tree_entry;
     const char * tree_entry_name;
@@ -524,7 +522,7 @@ int CreateObjectRecursive(
         const String& branch_name,
         const String& source_path,
         const String& relative_path,
-//        const git_oid *old_object_oid,
+        const git_oid *old_object_oid,
 
         // Operator
         IsIncludeOperator &IsIncluded,
@@ -535,6 +533,8 @@ int CreateObjectRecursive(
     git_oid child_oid;
     struct stat source_stat_buf;
     String source_branch_name;
+    git_tree *old_tree;
+    const git_oid *old_child_oid;
 
     if (!IsIncluded(relative_path)) {
         return 1;
@@ -573,9 +573,20 @@ int CreateObjectRecursive(
             return -1;
         }
 
-        // Create a tree builder for the directory
+        // Read old tree information
+        if (old_object_oid == NULL) {
+            old_tree = NULL;
+        } else {
+            rc = git_tree_lookup(&old_tree, repo, old_object_oid);
+            if (rc < 0) {
+                old_tree = NULL;
+            }
+        }
+
+        // Create a tree builder for the directory, use old tree information if
+        // possible.
         git_treebuilder *tree_builder;
-        git_treebuilder_create(&tree_builder, NULL);
+        git_treebuilder_create(&tree_builder, old_tree);
 
         while ((directory_entry = readdir(directory)) != NULL) {
             // Skip "." and ".."
@@ -589,9 +600,33 @@ int CreateObjectRecursive(
             String child_relative_path = relative_path + '/' + directory_entry->d_name;
             struct stat child_stat;
 
+            // Set up tree entry name
+            GitTreeEntryName tree_entry_name;
+            tree_entry_name.Init(directory_entry->d_name, &child_stat);
+            git_filemode_t tree_entry_mode = GitFileMode(tree_entry_name.mode);
+            String tree_entry_name_str = tree_entry_name.ToString();
+
+            // Find old tree entry id
+            // If old tree does exist
+            if (old_tree != NULL) {
+                // Search for the old tree entry
+                const git_tree_entry *old_tree_entry =
+                    git_tree_entry_byname(old_tree, tree_entry_name_str.c_str());
+
+                if (old_tree_entry != NULL) {
+                    old_child_oid = git_tree_entry_id(old_tree_entry);
+                } else {
+                    old_child_oid = NULL;
+                }
+            } else {
+                old_child_oid = NULL;
+            }
+
+
+            // Recursively call the function to create an object for the child
             rc = CreateObjectRecursive(&child_oid, &child_stat, repo, branch_name,
                     child_absolute_path.c_str(), child_relative_path.c_str(),
-                    IsIncluded, GetBranch);
+                    old_child_oid, IsIncluded, GetBranch);
             if (rc < 0) {
                 DBG("Failure in recursively create the object!");
                 return rc;
@@ -601,22 +636,14 @@ int CreateObjectRecursive(
                 // If the child is created, we shall include it into the tree
                 // builder
 
-                // Set up tree entry name
-                GitTreeEntryName tree_entry_name;
-                tree_entry_name.Init(directory_entry->d_name, &child_stat);
-                git_filemode_t tree_entry_mode = GitFileMode(tree_entry_name.mode);
-
                 // Add the child into the tree builder
                 rc = git_treebuilder_insert(NULL, tree_builder,
-                        tree_entry_name.ToString().c_str(), &child_oid, tree_entry_mode);
+                        tree_entry_name_str.c_str(), &child_oid, tree_entry_mode);
                 if (rc < 0) {
                     LOG("Cannot insert object into tree builder for file: %s, errno = %d", child_absolute_path.c_str(), rc);
-                    DBG("tree entry name: %s", tree_entry_name.ToString().c_str());
+                    DBG("tree entry name: %s", tree_entry_name_str.c_str());
                     return -1;
                 }
-            } else if (rc == 1) {
-                // Otherwise, we shall include the old object
-                // TODO Include the old object
             } else {
                 LOG("ERROR! UNEXPECTED RETURN VALUE: %d", rc);
                 return -1;
@@ -745,6 +772,7 @@ int GitVCS::Commit(const String& repo_pathname,
 // Commit the change into a specific repository, using the old commit id as the
 // base.
 int GitVCS::PartialCommit(const String& repo_pathname,
+        const String& branch_name,
         const String& relative_path,
         const String& work_dir,
         IsIncludeOperator &IsIncluded,
@@ -753,8 +781,6 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     int rc;
     git_repository *repo;
     git_signature *author, *committer;
-    // TODO Put this into the parameter
-    String branch_name;
 
     git_oid partial_oid, old_commit_id, new_commit_id;
     git_tree *new_commit_tree, *old_commit_tree;
@@ -767,15 +793,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
         return rc;
     }
 
-    // Step 2: Create partial trees
-    rc = CreateObjectRecursive(&partial_oid, NULL, repo, branch_name,
-            work_dir, relative_path, IsIncluded, GetBranch);
-    if (rc < 0) {
-        LOG("Failed to create the partial tree!");
-        return rc;
-    }
-
-    // Step 3: Find old commit id
+    // Step 2: Find old commit id
     rc = git_reference_name_to_oid(&old_commit_id, repo, branch_name.c_str());
     if (rc < 0) {
         LOG("Failure: Cannot retrieve the oid of the HEAD.");
@@ -791,10 +809,18 @@ int GitVCS::PartialCommit(const String& repo_pathname,
 #endif
     }
 
-    // Step 4: Get old commit tree
+    // Step 3: Get old commit tree
     rc = GetCommitTree(&old_commit_id, repo, &old_commit_tree);
     if (rc < 0) {
         LOG("Failure: Commit tree cannot be found.");
+        return rc;
+    }
+
+    // Step 4: Create partial trees
+    rc = CreateObjectRecursive(&partial_oid, NULL, repo, branch_name,
+            work_dir, relative_path, &old_commit_id, IsIncluded, GetBranch);
+    if (rc < 0) {
+        LOG("Failed to create the partial tree!");
         return rc;
     }
 
