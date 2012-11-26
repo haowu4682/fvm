@@ -13,10 +13,10 @@ class PartialTracer : public Tracer {
                 const String& link_dst, FVMClient *client);
 
         virtual int Commit();
+        virtual int Checkout(const String& branch_name);
 
     protected:
         virtual int Commit(const String& branch_name);
-        virtual int Checkout(const String& branch_name);
 
 #if 0
         virtual void Abandon(const String& old_branch, const String& new_branch);

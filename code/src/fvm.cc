@@ -14,6 +14,9 @@
 #include <common/commands.h>
 #include <common/util.h>
 
+//const String kDefaultUserName = "Unknown User";
+//const String kDefaultEmail = "unknown_email_addr";
+
 FVMClient *client = NULL;
 PartialTracer *tracer = NULL;
 
@@ -69,8 +72,8 @@ int cmd_link(const Vector<String> &args)
     }
 
     // Start the tracer
-    PartialTracer *tracer = new PartialTracer(args[1], args[2], args[3], client);
-    tracer->Start();
+    tracer = new PartialTracer(args[1], args[2], args[3], client);
+    tracer->Checkout("master");
 
     return 0;
 }
@@ -86,6 +89,28 @@ int cmd_commit(const Vector<String>& args)
 
     tracer->Commit();
 
+    return 0;
+}
+
+int cmd_trace_start(const Vector<String> &args)
+{
+    if (tracer == NULL) {
+        printf("Use the 'link' command to create a link first!\n");
+        return 0;
+    }
+
+    tracer->Start();
+    return 0;
+}
+
+int cmd_trace_end(const Vector<String> &args)
+{
+    if (tracer == NULL) {
+        printf("Use the 'link' command to create a link first!\n");
+        return 0;
+    }
+
+    tracer->Stop();
     return 0;
 }
 
@@ -144,14 +169,14 @@ struct cmd_t {
 };
 
 struct cmd_t fvm_commands[] = {
-    // Sharing mode command
     { "server", cmd_connect, "Set up the server information"},
     { "link", cmd_link, "Link a repository to a specified destination"},
+    { "trace-start", cmd_trace_start, "Start automatical tracing"},
+    { "trace-end", cmd_trace_end, "Start automatical tracing"},
     { "commit", cmd_commit, "Manually make a commitment"},
     { "backtrace-start", cmd_repo_backtrace_start, "enter backtrace mode for a specific path"},
     { "backtrace-stop", cmd_repo_backtrace_stop, "exit backtrace mode for a specific path"},
 
-    // Universal command
     { "help", cmd_help, "List help information" },
     { "exit", cmd_exit, "Exit the FVM console"}
 };

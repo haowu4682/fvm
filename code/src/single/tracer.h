@@ -37,6 +37,9 @@ class Tracer {
         // Manually make a commit
         virtual int Commit();
 
+        // Manually checks out the repository
+        virtual int Checkout(const String& branch_name);
+
         // Start backtrace
         virtual int StartBacktrace(const String& branch_name, const String& pathname);
         // End backtrace
@@ -64,7 +67,6 @@ class Tracer {
         // Folloing are some functions to be override by children
         // Trace selected files using the config in config_
         virtual void Trace();
-        virtual int Checkout(const String& branch_name);
         virtual int Abandon(const String& old_branch, const String& new_branch);
         virtual int Overwrite(const String& old_branch, const String& new_branch);
         virtual int Merge(const String& old_branch, const String& new_branch);
