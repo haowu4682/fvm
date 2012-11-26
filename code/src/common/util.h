@@ -19,6 +19,7 @@ std::istream& readline(std::istream& is, // the input stream for the command
 int split(const String& str, // The source string
         const String& delimeters, // The delimeters
         Vector<String>& str_array,
+        int start_index = 0,
         int max_count = INT_MAX); // Output
 
 // Is source a prefix of the target?

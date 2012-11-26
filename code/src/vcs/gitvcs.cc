@@ -75,7 +75,7 @@ String GitTreeEntryName::ToString() const
 int GitTreeEntryName::FromString(const String& str)
 {
     Vector<String> str_array;
-    split(str, "@", str_array, 3);
+    split(str, "@", str_array, 0, 3);
 
     if (str_array.size() < 4) {
         LOG("tree entry name corrupted: %s", str.c_str());
@@ -203,7 +203,7 @@ const git_tree_entry * GitTreeEntrySearchByName(git_tree *tree, const String& fi
         tree_entry = git_tree_entry_byindex(tree, index);
         tree_entry_name = git_tree_entry_name(tree_entry);
 
-        split(tree_entry_name, "/", splitted_tree_entry_name);
+        split(tree_entry_name, "@", splitted_tree_entry_name);
 
         if (splitted_tree_entry_name.back() == filename) {
             return tree_entry;
@@ -241,7 +241,7 @@ int GitTreeSearch(git_oid *relative_oid,
 {
     int rc;
     Vector<String> relative_path_splitted;
-    split(relative_path, "/", relative_path_splitted);
+    split(relative_path, "/", relative_path_splitted, 1);
 
     git_tree *current_tree = root_tree;
     const git_tree_entry *tree_entry;
@@ -449,7 +449,7 @@ int CombineObject(git_tree **new_root_tree,
 
     // Divide the combine point
     Vector<String> combine_point_list;
-    split(combine_point, "/", combine_point_list);
+    split(combine_point, "/", combine_point_list, 1);
 
     // Search for the combine point in the root tree
     rc = GitTreeSearch(&old_combine_oid, &tree_link_path, repo, root_tree,
@@ -868,6 +868,45 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     return 0;
 }
 
+int RetrieveHeadName(git_reference* head_ref,
+        git_repository* repo,
+        String& head_name)
+{
+    int rc;
+
+    git_oid head_target_oid;
+    const git_oid* head_oid;
+    char head_name_buf[GIT_OID_HEXSZ+1];
+    char *head_name_out;
+    const char *head_target_name;
+
+    switch (git_reference_type(head_ref)) {
+        case GIT_REF_OID:
+            head_oid = git_reference_oid(head_ref);
+            head_name_out = git_oid_tostr(head_name_buf, GIT_OID_HEXSZ+1, head_oid);
+            head_name = head_name_out;
+            break;
+
+        case GIT_REF_SYMBOLIC:
+            head_target_name = git_reference_target(head_ref);
+            rc = git_reference_name_to_oid(&head_target_oid, repo, head_target_name);
+            if (rc < 0) {
+                LOG("Failure: Cannot retrieve the oid of the HEAD.");
+                return rc;
+            }
+
+            head_name_out = git_oid_tostr(head_name_buf, GIT_OID_HEXSZ+1, head_oid);
+            head_name = head_name_out;
+            break;
+
+        default:
+            LOG("Unsupported git reference type");
+            return -1;
+    }
+
+    return 0;
+}
+
 // Retrieve the HEAD commit
 int GitVCS::GetHead(const String& repo_pathname,
         String& head_out)
@@ -876,9 +915,6 @@ int GitVCS::GetHead(const String& repo_pathname,
     git_repository *repo;
     git_reference *head_ref;
     const git_oid *head_oid;
-    git_oid head_target_oid;
-    char head_name[GIT_OID_HEXSZ+1];
-    char *head_name_out;
     const char *head_target_name;
 
     // Step 1: Open repository
@@ -895,36 +931,11 @@ int GitVCS::GetHead(const String& repo_pathname,
         return rc;
     }
 
-    switch (git_reference_type(head_ref)) {
-        case GIT_REF_OID:
-            head_oid = git_reference_oid(head_ref);
-            head_name_out = git_oid_tostr(head_name, GIT_OID_HEXSZ+1, head_oid);
-            break;
-        case GIT_REF_SYMBOLIC:
-            head_target_name = git_reference_target(head_ref);
-            rc = git_reference_name_to_oid(&head_target_oid, repo, head_target_name);
-            if (rc < 0) {
-                LOG("Failure: Cannot retrieve the oid of the HEAD.");
-                DBG("repo_pathname=%s; rc=%d", repo_pathname.c_str(), rc);
-                git_strarray ref_list;
-                git_reference_list(&ref_list, repo, GIT_REF_LISTALL);
-                for (int i = 0; i < ref_list.count; ++i) {
-                    const char *refname = ref_list.strings[i];
-                    DBG("refname=%s", refname);
-                }
-            }
-            return rc;
-            break;
-        default:
-            LOG("Unsupported git reference type");
-    }
-
+    rc = RetrieveHeadName(head_ref, repo, head_out);
     if (rc < 0) {
         LOG("Failure: Cannot retrieve the oid of the HEAD.");
+        return rc;
     }
-
-
-    head_out = head_name_out;
 
     return 0;
 }
@@ -948,22 +959,18 @@ int GitVCS::GetHead(const String& repo_pathname,
         return rc;
     }
 
-    rc = git_reference_name_to_oid(&head_oid, repo, branch_name.c_str());
+    // Step 2: Lookup the reference
+    rc = git_branch_lookup(&head_ref, repo, branch_name.c_str(), GIT_BRANCH_LOCAL);
     if (rc < 0) {
-        LOG("Failure: Cannot retrieve the oid of the HEAD.");
-        DBG("repo_pathname=%s; branch_name=%s, rc=%d", repo_pathname.c_str(), branch_name.c_str(), rc);
-        git_strarray ref_list;
-        git_reference_list(&ref_list, repo, GIT_REF_LISTALL);
-        for (int i = 0; i < ref_list.count; ++i) {
-            const char *refname = ref_list.strings[i];
-            DBG("refname=%s", refname);
-        }
-        return rc;
+        LOG("Failure: Cannot retrieve head reference");
     }
 
-    head_name_out = git_oid_tostr(head_name, GIT_OID_HEXSZ+1, &head_oid);
-
-    head_out = head_name_out;
+    // Step 3: Retrieve the head oid string
+    rc = RetrieveHeadName(head_ref, repo, head_out);
+    if (rc < 0) {
+        LOG("Failure: Cannot retrieve the oid of the HEAD.");
+        return rc;
+    }
 
     return 0;
 }

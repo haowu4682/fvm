@@ -9,9 +9,10 @@
 int split(const String& str, // The source string
         const String& delimeters, // The delimeters
         Vector<String>& str_array,
+        int start_index /* = 0 */,
         int max_count /* = INT_MAX */) // Output
 {
-    int start_index = 0, end_index = 0;
+    int end_index;
     int count = 0;
 
     if (str.empty()) {
