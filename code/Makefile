@@ -37,10 +37,6 @@ $(DAEMONBIN): $(DAEMONOBJ) $(COMMONOBJ) $(VCSOBJ) $(CONFIGOBJ)
 $(FVMBIN): $(COMMONOBJ) $(VCSOBJ) $(FVMOBJ) $(CONFIGOBJ)
 	$(LD) $(LDFLAGS) $(CONFIGOBJ) $(COMMONOBJ) $(VCSOBJ) $(FVMOBJ) -o $(FVMBIN) $(LDADD)
 
-$(BINDIR)/daemon/%.o: $(SRCDIR)/daemon/%.cc $(COMMONHDR) $(VCSHDR) $(FVMHDR) $(CONFIGHDR)
-	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/daemon
-	$(CC) $(CFLAGS) -o $@ -c $<
-
 $(BINDIR)/common/%.o: $(SRCDIR)/common/%.cc $(COMMONHDR)
 	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/common
 	$(CC) $(CFLAGS) -o $@ -c $<
@@ -51,6 +47,10 @@ $(BINDIR)/config/%.o: $(SRCDIR)/config/%.cc $(COMMONHDR) $(CONFIGHDR)
 
 $(BINDIR)/vcs/%.o: $(SRCDIR)/vcs/%.cc $(VCSHDR) $(COMMONHDR)
 	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/vcs
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+$(BINDIR)/daemon/%.o: $(SRCDIR)/daemon/%.cc $(COMMONHDR) $(VCSHDR) $(FVMHDR) $(CONFIGHDR)
+	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/daemon
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 $(BINDIR)/%.o: $(SRCDIR)/%.cc $(FVMHDR) $(COMMONHDR) $(VCSHDR) $(CONFIGHDR)
