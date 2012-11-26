@@ -9,11 +9,12 @@
 #include <vcs/gitvcs.h>
 
 PartialTracer::PartialTracer(const String& repo, const String& link_src,
-        const String& link_dst, FVMClient *client)
+        const String& link_dst, FVMClient *client, RepoConfig *config)
+    : Tracer(config)
 {
     relative_path_ = link_src;
     link_dst_ = link_dst;
-    config_.repo_path(repo);
+    repo_path_ = repo;
     client_ = client;
 }
 
@@ -54,8 +55,8 @@ int PartialTracer::Commit(const String& branch_name)
         return rc;
     }
 
-    rc = client_->Commit(config_.repo_path(), relative_path_, link_dst_,
-            branch_name, &config_, &branch_manager_);
+    rc = client_->Commit(repo_path_, relative_path_, link_dst_,
+            branch_name, config_, &branch_manager_);
     if (rc < 0) {
         LOG("Cannot commit to the specified repository.");
         return rc;
@@ -76,7 +77,7 @@ int PartialTracer::Checkout(const String& branch_name)
         return 0;
     }
 
-    rc = client_->RetrieveHead(config_.repo_path(), branch_name, head_id);
+    rc = client_->RetrieveHead(repo_path_, branch_name, head_id);
     if (rc < 0) {
         LOG("Cannot retrieve HEAD status.");
         return 0;
@@ -87,7 +88,7 @@ int PartialTracer::Checkout(const String& branch_name)
         LOG("Cannot establish connection to the server.");
         return 0;
     }
-    rc = client_->Checkout(config_.repo_path(), relative_path_, link_dst_, head_id);
+    rc = client_->Checkout(repo_path_, relative_path_, link_dst_, head_id);
     if (rc < 0) {
         LOG("Cannot checkout the specified repository.");
         return 0;

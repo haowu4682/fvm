@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -14,11 +15,11 @@
 #include <common/commands.h>
 #include <common/util.h>
 
-//const String kDefaultUserName = "Unknown User";
-//const String kDefaultEmail = "unknown_email_addr";
+#include <config/config.h>
 
 FVMClient *client = NULL;
 PartialTracer *tracer = NULL;
+RepoConfig *config = NULL;
 
 int cmd_help(const Vector<String>& args);
 
@@ -72,7 +73,7 @@ int cmd_link(const Vector<String> &args)
     }
 
     // Start the tracer
-    tracer = new PartialTracer(args[1], args[2], args[3], client);
+    tracer = new PartialTracer(args[1], args[2], args[3], client, config);
     tracer->Checkout("master");
 
     return 0;
@@ -162,6 +163,17 @@ int cmd_repo_backtrace_stop(const Vector<String> &args)
     return 0;
 }
 
+int cmd_print_config(const Vector<String> &args)
+{
+    if (config == NULL) {
+        printf("config does not exist!");
+    }
+
+    std::cout << config->ToString() << std::endl;
+
+    return 0;
+}
+
 struct cmd_t {
     const char *cmd;
     int (*fn) (const Vector<String>& /* args */);
@@ -169,6 +181,7 @@ struct cmd_t {
 };
 
 struct cmd_t fvm_commands[] = {
+    // FVM Commands
     { "server", cmd_connect, "Set up the server information"},
     { "link", cmd_link, "Link a repository to a specified destination"},
     { "trace-start", cmd_trace_start, "Start automatical tracing"},
@@ -177,8 +190,10 @@ struct cmd_t fvm_commands[] = {
     { "backtrace-start", cmd_repo_backtrace_start, "enter backtrace mode for a specific path"},
     { "backtrace-stop", cmd_repo_backtrace_stop, "exit backtrace mode for a specific path"},
 
+    // Utility commands
     { "help", cmd_help, "List help information" },
-    { "exit", cmd_exit, "Exit the FVM console"}
+    { "exit", cmd_exit, "Exit the FVM console"},
+    { "print-config", cmd_print_config, "Print the current config information"}
 };
 
 void usage() {
@@ -243,12 +258,15 @@ int main(int argc, char **argv)
     int rc = 0;
     Vector<String> command_args;
 
-    if (argc < 3) {
-        printf("Usage: fvm user_name user_email\n");
+    if (argc < 2) {
+        printf("Usage: fvm config_file\n");
         return 0;
     }
 
-    client = new FVMClient(argv[1], argv[2]);
+    std::ifstream config_stream(argv[1]);
+
+    config = new RepoConfig(config_stream);
+    client = new FVMClient(config->username(), config->user_email());
 
     while (rc != 1) {
         std::cout << "fvm> ";
@@ -262,6 +280,7 @@ int main(int argc, char **argv)
     }
 
     delete client;
+    delete config;
 
     return 0;
 }

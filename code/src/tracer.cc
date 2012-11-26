@@ -17,6 +17,15 @@ Tracer::Tracer()
     Init();
 }
 
+Tracer::Tracer(RepoConfig *config)
+{
+    running_ = false;
+    vcs = new GitVCS();
+
+    config_ = config;
+    Init();
+}
+
 void Tracer::Start()
 {
     running_ = true;
@@ -52,7 +61,7 @@ void Tracer::Trace()
         Commit();
     }
 
-    sleep(config_.time_interval_s());
+    sleep(config_->time_interval_s());
 }
 
 // Start backtrace
@@ -89,16 +98,16 @@ int Tracer::Commit()
     Vector<String> change_list;
     Vector<String> commit_list;
     if (vcs != NULL) {
-        vcs->GetChangeList(config_.repo_path(), change_list);
+        vcs->GetChangeList(repo_path_, change_list);
 
         for (Vector<String>::iterator it = change_list.begin();
                 it != change_list.end(); ++it) {
-            if (config_.GetTraceLevel(*it) != kNone) {
+            if (config_->GetTraceLevel(*it) != kNone) {
                 commit_list.push_back(*it);
             }
         }
 
-        vcs->Commit(config_.repo_path(), commit_list);
+        vcs->Commit(repo_path_, commit_list);
     }
 }
 

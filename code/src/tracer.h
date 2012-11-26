@@ -23,8 +23,7 @@ class Tracer {
 
         // Constructor(s)
         Tracer();
-        Tracer(const RepoConfig &config);
-        Tracer(const String& config_str);
+        Tracer(RepoConfig *config);
 
         // Initialize the tracer thread
         virtual void Init();
@@ -53,7 +52,7 @@ class Tracer {
         pthread_t trace_thread_;
 
         // The config of the tracer
-        RepoConfig config_;
+        RepoConfig *config_;
 
         // The friend function is used for pthread only
         friend void * trace_pthread_function(void * /* tracer_void_ptr */);
@@ -63,6 +62,9 @@ class Tracer {
 
         // The version control system
         VersionControlSystem* vcs;
+
+        // Repository path
+        String repo_path_;
 
         // Folloing are some functions to be override by children
         // Trace selected files using the config in config_
