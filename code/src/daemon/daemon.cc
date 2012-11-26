@@ -13,8 +13,8 @@
 
 #include <common/common.h>
 #include <common/util.h>
-#include <single/branchmanager.h>
-#include <single/config.h>
+#include <config/branchmanager.h>
+#include <config/config.h>
 #include <vcs/gitvcs.h>
 #include <vcs/vcs.h>
 

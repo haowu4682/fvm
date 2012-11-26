@@ -4,7 +4,7 @@
 #define PARTIALTRACER_H__
 
 #include <fvmclient.h>
-#include <single/tracer.h>
+#include <tracer.h>
 
 class PartialTracer : public Tracer {
     public:

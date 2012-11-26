@@ -1,13 +1,13 @@
 // The file describers Tracer, the utility to trace files
 
-#ifndef SINGLE_TRACER_H__
-#define SINGLE_TRACER_H__
+#ifndef TRACER_H__
+#define TRACER_H__
 
 #include <pthread.h>
 
 #include <common/common.h>
-#include <single/branchmanager.h>
-#include <single/config.h>
+#include <config/branchmanager.h>
+#include <config/config.h>
 #include <vcs/vcs.h>
 
 enum BacktraceMergeChoice {
@@ -72,5 +72,5 @@ class Tracer {
         virtual int Merge(const String& old_branch, const String& new_branch);
 };
 
-#endif // SINGLE_TRACER_H__
+#endif // TRACER_H__
 

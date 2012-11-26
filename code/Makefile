@@ -10,9 +10,9 @@ FVMOBJ          := $(patsubst $(SRCDIR)/%.cc, $(BINDIR)/%.o, $(FVMSRC))
 COMMONHDR       := $(wildcard $(SRCDIR)/common/*.h)
 COMMONSRC       := $(wildcard $(SRCDIR)/common/*.cc)
 COMMONOBJ       := $(patsubst $(SRCDIR)/common/%.cc, $(BINDIR)/common/%.o, $(COMMONSRC))
-SINGLEHDR       := $(wildcard $(SRCDIR)/single/*.h)
-SINGLESRC       := $(wildcard $(SRCDIR)/single/*.cc)
-SINGLEOBJ       := $(patsubst $(SRCDIR)/single/%.cc, $(BINDIR)/single/%.o, $(SINGLESRC))
+CONFIGHDR       := $(wildcard $(SRCDIR)/config/*.h)
+CONFIGSRC       := $(wildcard $(SRCDIR)/config/*.cc)
+CONFIGOBJ       := $(patsubst $(SRCDIR)/config/%.cc, $(BINDIR)/config/%.o, $(CONFIGSRC))
 VCSHDR          := $(wildcard $(SRCDIR)/vcs/*.h)
 VCSSRC          := $(wildcard $(SRCDIR)/vcs/*.cc)
 VCSOBJ          := $(patsubst $(SRCDIR)/vcs/%.cc, $(BINDIR)/vcs/%.o, $(VCSSRC))
@@ -31,30 +31,29 @@ all: fvm
 
 fvm: $(FVMBIN) $(DAEMONBIN)
 
-$(DAEMONBIN): $(DAEMONOBJ) $(COMMONOBJ) $(SINGLEOBJ) $(VCSOBJ)
-	$(LD) $(LDFLAGS) $(DAEMONOBJ) $(COMMONOBJ) $(SINGLEOBJ) $(VCSOBJ) -o $(DAEMONBIN) $(LDADD)
+$(DAEMONBIN): $(DAEMONOBJ) $(COMMONOBJ) $(VCSOBJ) $(CONFIGOBJ)
+	$(LD) $(LDFLAGS) $(DAEMONOBJ) $(COMMONOBJ) $(CONFIGOBJ) $(VCSOBJ) -o $(DAEMONBIN) $(LDADD)
 
-$(FVMBIN): $(COMMONOBJ) $(SINGLEOBJ) $(VCSOBJ) $(FVMOBJ)
-	$(LD) $(LDFLAGS) $(SINGLEOBJ) $(COMMONOBJ) $(VCSOBJ) $(FVMOBJ) -o $(FVMBIN) $(LDADD)
+$(FVMBIN): $(COMMONOBJ) $(VCSOBJ) $(FVMOBJ) $(CONFIGOBJ)
+	$(LD) $(LDFLAGS) $(CONFIGOBJ) $(COMMONOBJ) $(VCSOBJ) $(FVMOBJ) -o $(FVMBIN) $(LDADD)
 
-$(BINDIR)/daemon/%.o: $(SRCDIR)/daemon/%.cc $(COMMONHDR) $(VCSHDR)
+$(BINDIR)/daemon/%.o: $(SRCDIR)/daemon/%.cc $(COMMONHDR) $(VCSHDR) $(FVMHDR) $(CONFIGHDR)
 	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/daemon
 	$(CC) $(CFLAGS) -o $@ -c $<
-
 
 $(BINDIR)/common/%.o: $(SRCDIR)/common/%.cc $(COMMONHDR)
 	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/common
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-$(BINDIR)/single/%.o: $(SRCDIR)/single/%.cc $(SINGLEHDR) $(COMMONHDR) $(VCSHDR)
-	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/single
+$(BINDIR)/config/%.o: $(SRCDIR)/config/%.cc $(COMMONHDR) $(CONFIGHDR)
+	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/config
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 $(BINDIR)/vcs/%.o: $(SRCDIR)/vcs/%.cc $(VCSHDR) $(COMMONHDR)
 	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/vcs
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-$(BINDIR)/%.o: $(SRCDIR)/%.cc $(FVMHDR) $(COMMONHDR)
+$(BINDIR)/%.o: $(SRCDIR)/%.cc $(FVMHDR) $(COMMONHDR) $(VCSHDR) $(CONFIGHDR)
 	mkdir -p $(BINDIR)
 	$(CC) $(CFLAGS) -o $@ -c $<
 
@@ -62,5 +61,5 @@ tags:
 	cd src; ctags -R --fields=+lS
 
 clean:
-	rm -f $(FVMBIN) $(FVMOBJ) $(COMMONOBJ) $(SINGLEOBJ) $(VCSOBJ)
+	rm -f $(FVMBIN) $(DAEMONBIN) $(FVMOBJ) $(COMMONOBJ) $(VCSOBJ) $(CONFIGOBJ) $(DAEMONOBJ)
 

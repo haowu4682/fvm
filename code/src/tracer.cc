@@ -4,7 +4,7 @@
 #include <vector>
 
 #include <common/common.h>
-#include <single/tracer.h>
+#include <tracer.h>
 #include <vcs/gitvcs.h>
 
 Tracer* Tracer::current_tracer = NULL;

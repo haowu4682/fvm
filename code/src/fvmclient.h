@@ -6,8 +6,8 @@
 #include <string>
 
 #include <common/common.h>
-#include <single/branchmanager.h>
-#include <single/config.h>
+#include <config/branchmanager.h>
+#include <config/config.h>
 
 class FVMClient {
     public:
