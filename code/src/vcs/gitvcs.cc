@@ -30,6 +30,14 @@ void PrintOid(const git_oid *oid)
     printf("%s\n", buf);
 }
 
+String OidToStr(const git_oid *oid)
+{
+    char buf[10000];
+    git_oid_tostr(buf, 10000, oid);
+
+    return buf;
+}
+
 void PrintTreeEntry(const git_tree_entry *entry)
 {
     const git_oid *id;
@@ -157,6 +165,84 @@ GitTreeEntryName::GitTreeEntryName(const String& str)
 GitTreeEntryName::GitTreeEntryName(const String& name, const struct stat* stat)
 {
     Init(name, stat);
+}
+
+// Retrieve the HEAD commit
+int RetrieveHeadOid(git_reference* head_ref,
+        git_repository* repo,
+        git_oid *head_oid_out)
+{
+    int rc;
+
+    git_oid head_target_oid;
+    const git_oid* head_oid;
+    char head_name_buf[GIT_OID_HEXSZ+1];
+    char *head_name_out;
+    const char *head_target_name;
+
+    switch (git_reference_type(head_ref)) {
+        case GIT_REF_OID:
+            head_oid = git_reference_oid(head_ref);
+            git_oid_cpy(head_oid_out, head_oid);
+            break;
+
+        case GIT_REF_SYMBOLIC:
+            head_target_name = git_reference_target(head_ref);
+            rc = git_reference_name_to_oid(&head_target_oid, repo, head_target_name);
+            if (rc < 0) {
+                LOG("Failure: Cannot retrieve the oid of the HEAD.");
+                return rc;
+            }
+
+            git_oid_cpy(head_oid_out, &head_target_oid);
+            break;
+
+        default:
+            LOG("Unsupported git reference type");
+            return -1;
+    }
+
+    return 0;
+}
+
+// Retrieve the HEAD commit
+int RetrieveHeadName(git_reference* head_ref,
+        git_repository* repo,
+        String& head_name)
+{
+    int rc;
+
+    git_oid head_target_oid;
+    const git_oid* head_oid;
+    char head_name_buf[GIT_OID_HEXSZ+1];
+    char *head_name_out;
+    const char *head_target_name;
+
+    switch (git_reference_type(head_ref)) {
+        case GIT_REF_OID:
+            head_oid = git_reference_oid(head_ref);
+            head_name_out = git_oid_tostr(head_name_buf, GIT_OID_HEXSZ+1, head_oid);
+            head_name = head_name_out;
+            break;
+
+        case GIT_REF_SYMBOLIC:
+            head_target_name = git_reference_target(head_ref);
+            rc = git_reference_name_to_oid(&head_target_oid, repo, head_target_name);
+            if (rc < 0) {
+                LOG("Failure: Cannot retrieve the oid of the HEAD.");
+                return rc;
+            }
+
+            head_name_out = git_oid_tostr(head_name_buf, GIT_OID_HEXSZ+1, &head_target_oid);
+            head_name = head_name_out;
+            break;
+
+        default:
+            LOG("Unsupported git reference type");
+            return -1;
+    }
+
+    return 0;
 }
 
 int GetCommitTree(const git_oid *commit_oid, git_repository *repo, git_tree **commit_tree)
@@ -536,13 +622,13 @@ int CreateObjectRecursive(
     git_tree *old_tree;
     const git_oid *old_child_oid;
 
-    if (!IsIncluded(relative_path)) {
-        return 1;
-    }
-
     source_branch_name = GetBranch(relative_path);
 
-    if (source_branch_name != branch_name) {
+    DBG("path:%s, branch:%s, required branch:%s", relative_path.c_str(),
+            source_branch_name.c_str(), branch_name.c_str());
+
+    if (!IsIncluded(relative_path) || source_branch_name != branch_name) {
+        git_oid_cpy(source_oid, old_object_oid);
         return 1;
     }
 
@@ -632,7 +718,7 @@ int CreateObjectRecursive(
                 return rc;
             }
 
-            if (rc == 0) {
+            if (rc == 0 || rc == 1) {
                 // If the child is created, we shall include it into the tree
                 // builder
 
@@ -782,6 +868,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     git_repository *repo;
     git_signature *author, *committer;
 
+    git_reference *head_ref;
     git_oid partial_oid, old_commit_id, new_commit_id;
     git_tree *new_commit_tree, *old_commit_tree;
     git_commit *old_commit, *new_commit;
@@ -794,19 +881,17 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     }
 
     // Step 2: Find old commit id
-    rc = git_reference_name_to_oid(&old_commit_id, repo, branch_name.c_str());
+    // Step 2.1 Lookup the reference
+    rc = git_branch_lookup(&head_ref, repo, branch_name.c_str(), GIT_BRANCH_LOCAL);
+    if (rc < 0) {
+        LOG("Failure: Cannot retrieve head reference");
+    }
+
+    // Step 2.2 Find the oid
+    rc = RetrieveHeadOid(head_ref, repo, &old_commit_id);
     if (rc < 0) {
         LOG("Failure: Cannot retrieve the oid of the HEAD.");
         return rc;
-#if 0
-        DBG("repo_pathname=%s; branch_name=%s, rc=%d", repo_pathname.c_str(), branch_name.c_str(), rc);
-        git_strarray ref_list;
-        git_reference_list(&ref_list, repo, GIT_REF_LISTALL);
-        for (int i = 0; i < ref_list.count; ++i) {
-            const char *refname = ref_list.strings[i];
-            DBG("refname=%s", refname);
-        }
-#endif
     }
 
     // Step 3: Get old commit tree
@@ -822,7 +907,22 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     if (rc < 0) {
         LOG("Failed to create the partial tree!");
         return rc;
+    } else if (rc == 1) {
+        LOG("the specified relative path is not included or not with a correct branch");
     }
+
+    // Debug: print partial tree
+#ifdef DEBUG
+    git_tree *partial_tree;
+    rc = git_tree_lookup(&partial_tree, repo, &partial_oid);
+    if (rc < 0) {
+        DBG("partial tree is not a tree! oid = ");
+        PrintOid(&partial_oid);
+    } else {
+        DBG("partial tree: ");
+        PrintTree(partial_tree);
+    }
+#endif
 
     // Step 5: Create new trees
     rc = CombineObject(&new_commit_tree, repo, old_commit_tree, &partial_oid, relative_path);
@@ -864,45 +964,6 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     git_tree_free(new_commit_tree);
     git_commit_free(old_commit);
     git_repository_free(repo);
-
-    return 0;
-}
-
-int RetrieveHeadName(git_reference* head_ref,
-        git_repository* repo,
-        String& head_name)
-{
-    int rc;
-
-    git_oid head_target_oid;
-    const git_oid* head_oid;
-    char head_name_buf[GIT_OID_HEXSZ+1];
-    char *head_name_out;
-    const char *head_target_name;
-
-    switch (git_reference_type(head_ref)) {
-        case GIT_REF_OID:
-            head_oid = git_reference_oid(head_ref);
-            head_name_out = git_oid_tostr(head_name_buf, GIT_OID_HEXSZ+1, head_oid);
-            head_name = head_name_out;
-            break;
-
-        case GIT_REF_SYMBOLIC:
-            head_target_name = git_reference_target(head_ref);
-            rc = git_reference_name_to_oid(&head_target_oid, repo, head_target_name);
-            if (rc < 0) {
-                LOG("Failure: Cannot retrieve the oid of the HEAD.");
-                return rc;
-            }
-
-            head_name_out = git_oid_tostr(head_name_buf, GIT_OID_HEXSZ+1, head_oid);
-            head_name = head_name_out;
-            break;
-
-        default:
-            LOG("Unsupported git reference type");
-            return -1;
-    }
 
     return 0;
 }

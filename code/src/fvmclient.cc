@@ -95,6 +95,11 @@ int FVMClient::Commit(const String &repo_path, const String &link_src,
         branch_map = &branch_manager->branch_map();
     }
 
+    assert(trace_level_map != NULL && branch_map != NULL);
+
+    command_sout << ' ' << trace_level_map->size()
+                 << ' ' << branch_map->size();
+
     if (config != NULL) {
         for (Map<String, TraceLevel>::const_iterator it = trace_level_map->begin();
                 it != trace_level_map->end(); ++it) {

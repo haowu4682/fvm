@@ -1,5 +1,6 @@
 // The implementation of repository backtrace mode.
 
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -44,5 +45,19 @@ String BranchManager::GetBranch(const String& path) const
     }
 
     return current_name;
+}
+
+String BranchManager::ToString() const
+{
+    std::ostringstream str_stream;
+
+    for (Map<String, String>::const_iterator it = branch_map_.begin();
+            it != branch_map_.end(); ++it) {
+        str_stream << "key: " << it->first << "\t"
+                   << "value:" << it->second
+                   << std::endl;
+    }
+
+    return str_stream.str();
 }
 

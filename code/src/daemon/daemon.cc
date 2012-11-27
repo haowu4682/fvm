@@ -114,7 +114,8 @@ void ResponseForClient(int client_sockfd)
         // Format: COMMIT repo branch_name relative_path source_path author email
         // num_of_tracelevel num_of_branch [path level]* [path branch]*
         if (command_args.size() < 9) {
-            LOG("Format error for COMMIT command.");
+            LOG("Format error for COMMIT command. Command args not enough. Given: %ld",
+                    command_args.size());
         } else {
             String& repo_name = command_args[1];
             String& branch_name = command_args[2];
@@ -131,6 +132,7 @@ void ResponseForClient(int client_sockfd)
             if (command_args.size() < required_args_size) {
                 LOG("Command args not enough! Required:%d, Given: %ld",
                         required_args_size, command_args.size());
+                return;
             }
 
             TraceLevelManagerAdv trace_level_manager;
@@ -138,6 +140,9 @@ void ResponseForClient(int client_sockfd)
             branch_start_index = ParseTraceLevel(command_args,
                     trace_level_start_index, trace_level_size, trace_level_manager);
             ParseBranchManager(command_args, branch_start_index, branch_manager_size, branch_manager);
+
+            DBG("Trace level manager list: %s", trace_level_manager.ToString().c_str());
+            DBG("Branch manager list: %s", branch_manager.ToString().c_str());
 
             vcs->username(author_name);
             vcs->user_email(author_email);

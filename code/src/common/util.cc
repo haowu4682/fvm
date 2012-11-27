@@ -59,7 +59,7 @@ bool IsPrefix(const String& source, const String& target)
     if (source.size() > target.size()) {
         return false;
     } else {
-        return target.compare(0, source.size(), source);
+        return target.compare(0, source.size(), source) == 0;
     }
 }
 

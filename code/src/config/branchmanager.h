@@ -28,6 +28,9 @@ class BranchManager {
         // Remove a branch content
         int Remove(const String& name);
 
+        // Print out the string
+        String ToString() const;
+
     private:
         // Constants
         const static String kDefaultBranchName;

@@ -31,11 +31,14 @@ RepoConfig::RepoConfig(std::istream& config_stream)
 
 TraceLevel TraceLevelManager::GetTraceLevel(const String& pathname) const
 {
-    String current_path;
+    String current_path = "";
     TraceLevel current_level = kNone;
 
     for (Map<String, TraceLevel>::const_iterator it = trace_level_map_.begin();
             it != trace_level_map_.end(); ++it) {
+        DBG("Current path:%s, current level:%d, list path:%s, list level:%d, pathname:%s",
+                current_path.c_str(), current_level,
+                it->first.c_str(), it->second, pathname.c_str());
         if (IsPrefix(it->first, pathname) &&
                 !IsPrefix(it->first, current_path)) {
             current_path = it->first;
