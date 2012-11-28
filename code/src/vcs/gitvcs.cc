@@ -577,12 +577,23 @@ int CombineObject(git_tree **new_root_tree,
     for (int i = combine_point_list.size() - 1; i >= 0; --i) {
         DBG("Commit point path: %s", combine_point_list[i].c_str());
 
+        // Find old tree entry
         current_parent_tree = tree_link_path[i];
         String &current_child_name = combine_point_list[i];
+        const git_tree_entry* old_tree_entry = GitTreeEntrySearchByName(
+                current_parent_tree, current_child_name);
+        if (old_tree_entry == NULL) {
+            LOG("Old tree entry does not exist! We cannot perfrom the commit action due to that.");
+            return -1;
+        }
 
+        // Find new tree entry name
+        const char *child_entry_name_c_str = git_tree_entry_name(old_tree_entry);
+
+        // Write the tree entry into the tree
         git_treebuilder_create(&tree_builder, current_parent_tree);
 
-        git_treebuilder_insert(NULL, tree_builder, current_child_name.c_str(),
+        git_treebuilder_insert(NULL, tree_builder, child_entry_name_c_str,
                 &current_new_oid, GIT_FILEMODE_TREE);
 
         git_treebuilder_write(&current_new_oid, repo, tree_builder);
