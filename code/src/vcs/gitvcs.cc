@@ -683,8 +683,9 @@ int CreateObjectRecursive(
 
             // Create an object for every child
             String child_absolute_path = source_path + '/' + directory_entry->d_name;
-            String child_relative_path = relative_path + '/' + directory_entry->d_name;
+            String child_relative_path = relative_path + directory_entry->d_name + '/';
             struct stat child_stat;
+            stat(child_absolute_path.c_str(), &child_stat);
 
             // Set up tree entry name
             GitTreeEntryName tree_entry_name;
