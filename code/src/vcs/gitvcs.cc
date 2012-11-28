@@ -896,11 +896,23 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     }
 
     // Step 3: Get old commit tree
-    rc = GetCommitTree(&old_commit_id, repo, &old_commit_tree);
+    rc = git_commit_lookup(&old_commit, repo, &old_commit_id);
+    if (rc < 0) {
+        LOG("Failure: Commit object cannot be found.");
+        return rc;
+    }
+
+    rc = git_commit_tree(&old_commit_tree, old_commit);
     if (rc < 0) {
         LOG("Failure: Commit tree cannot be found.");
         return rc;
     }
+
+#ifdef DEBUG
+    DBG("old commit tree: ");
+    PrintOid(git_tree_id(old_commit_tree));
+    PrintTree(old_commit_tree);
+#endif
 
     // Step 4: Create partial trees
     rc = CreateObjectRecursive(&partial_oid, NULL, repo, branch_name,
@@ -932,6 +944,12 @@ int GitVCS::PartialCommit(const String& repo_pathname,
         return rc;
     }
 
+#ifdef DEBUG
+    DBG("full commit tree: ");
+    PrintOid(git_tree_id(new_commit_tree));
+    PrintTree(partial_tree);
+#endif
+
     // Step 6: Create author and committer information
     rc = git_signature_now(&author, username_.c_str(), user_email_.c_str());
     if (rc < 0) {
@@ -945,11 +963,15 @@ int GitVCS::PartialCommit(const String& repo_pathname,
         return -1;
     }
 
-    // Step 7: Create commit object
+    // Step 7: Get branch information
+    const char *reference_name_c_str = git_reference_name(head_ref);
+    DBG("old reference name: %s", reference_name_c_str);
+
+    // Step 8: Create commit object
     git_commit_create_v(
             &new_commit_id,
             repo,
-            branch_name.c_str(),
+            reference_name_c_str,
             author,
             committer,
             NULL,
