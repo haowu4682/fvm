@@ -391,7 +391,14 @@ int GitBlobWrite(git_repository *repo, git_blob *blob, const String& destination
     const void *buf = git_blob_rawcontent(blob);
     size_t size = git_blob_rawsize(blob);
 
+    DBG("size = %ld", size);
+    DBG("content = %s", (char *)buf);
+
     FILE *file = fopen(destination.c_str(), "w");
+    if (file == NULL) {
+        LOG("Cannot open file to write: %s", destination.c_str());
+        return -1;
+    }
     fwrite((char *)buf, size, 1, file);
     fclose(file);
     name.WriteToFile(destination);
@@ -409,6 +416,7 @@ int GitTreeWriteCallback(const char *root,
         const git_tree_entry *entry,
         void *payload)
 {
+    DBG("Tree Entry: ");
     PrintTreeEntry(entry);
 
     int rc;
@@ -423,8 +431,11 @@ int GitTreeWriteCallback(const char *root,
     // Step 2 Get child path
     std::ostringstream file_name_stream;
     file_name_stream << *data->destination << "/" << root;
-    file_name_stream << "/" << tree_entry_name.name;
+    file_name_stream << tree_entry_name.name;
     String file_name = file_name_stream.str();
+    DBG("destination:%s, root:%s, name:%s", data->destination->c_str(),
+            root, tree_entry_name.name.c_str());
+    DBG("file name:%s", file_name.c_str());
 
     // Step 3 Create file/dir for child
     git_otype entry_type = git_tree_entry_type(entry);
