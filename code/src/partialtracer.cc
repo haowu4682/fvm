@@ -69,7 +69,6 @@ int PartialTracer::Checkout(const String& branch_name)
 {
     int rc;
 
-    // Usage: link REPO LINK_SRC LINK_DST
     String head_id;
     rc = client_->Connect();
     if (rc < 0) {
@@ -91,6 +90,25 @@ int PartialTracer::Checkout(const String& branch_name)
     rc = client_->Checkout(repo_path_, relative_path_, link_dst_, head_id);
     if (rc < 0) {
         LOG("Cannot checkout the specified repository.");
+        return 0;
+    }
+
+    return 0;
+}
+
+int PartialTracer::InitBacktrace(const String& branch_name, const String& commit_id)
+{
+    int rc;
+
+    rc = client_->Connect();
+    if (rc < 0) {
+        LOG("Cannot establish connection to the server.");
+        return 0;
+    }
+
+    rc = client_->BranchCreate(repo_path_, branch_name, commit_id);
+    if (rc < 0) {
+        LOG("Cannot create the speicifed branch.");
         return 0;
     }
 

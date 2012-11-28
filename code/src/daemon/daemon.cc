@@ -163,6 +163,8 @@ void ResponseForClient(int client_sockfd)
 
         LOG("head commit: %s", head_commit_str.c_str());
         write(client_sockfd, head_commit_str.c_str(), head_commit_str.size());
+    } else if (command_args[0] == "BRANCHCREATE") {
+        vcs->BranchCreate(command_args[1], command_args[2], command_args[3]);
     } else {
         // Undefined command, do nothing
         LOG("Undefined command: %s", command_args[0].c_str());

@@ -175,3 +175,20 @@ int FVMClient::RetrieveHead(const String &repo_path, const String& branch_name, 
 
     return 0;
 }
+
+int FVMClient::BranchCreate(const String& repo_path, const String& branch_name,
+        const String& head_id)
+{
+    std::ostringstream command_sout;
+    command_sout << "BRANCHCREATE " << repo_path << ' ' << branch_name << ' '
+        << head_id;
+    String command_line = command_sout.str();
+
+    int rc = write(sockfd_, command_line.c_str(), command_line.size());
+    if (rc < 0) {
+        LOG("Failed to send command to the server: %s", command_line.c_str());
+    }
+
+    return 0;
+}
+

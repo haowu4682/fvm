@@ -15,6 +15,7 @@ class PartialTracer : public Tracer {
 
         virtual int Commit();
         virtual int Checkout(const String& branch_name);
+        virtual int InitBacktrace(const String& branch_name, const String& commit_id);
 
     protected:
         virtual int Commit(const String& branch_name);

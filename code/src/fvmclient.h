@@ -44,6 +44,9 @@ class FVMClient {
         int RetrieveHead(const String &repo_path, String &head_out);
         int RetrieveHead(const String &repo_path, const String& branch_name, String &head_out);
 
+        // Create a branch
+        int BranchCreate(const String& repo_path, const String& branch_name, const String& head_id);
+
     private:
         // Basic server data
         String hostname_;

@@ -39,8 +39,12 @@ class Tracer {
         // Manually checks out the repository
         virtual int Checkout(const String& branch_name);
 
+        // Init a backtrace
+        virtual int InitBacktrace(const String& branch_name, const String& commit_id);
+
         // Start backtrace
         virtual int StartBacktrace(const String& branch_name, const String& pathname);
+
         // End backtrace
         virtual int StopBacktrace(const String& branch_name, BacktraceMergeChoice merge_choice);
 

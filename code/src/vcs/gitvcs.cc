@@ -58,6 +58,7 @@ void PrintTreeEntry(const git_tree_entry *entry)
 
 void PrintTree(git_tree *tree)
 {
+    DBG("tree entry size = %d", git_tree_entrycount(tree));
     printf("name oid type\n");
     for (int i = 0; i < git_tree_entrycount(tree); ++i) {
         const git_tree_entry* entry = git_tree_entry_byindex(tree, i);
@@ -969,7 +970,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
 #ifdef DEBUG
     DBG("full commit tree: ");
     PrintOid(git_tree_id(new_commit_tree));
-    PrintTree(partial_tree);
+    PrintTree(new_commit_tree);
 #endif
 
     // Step 6: Create author and committer information

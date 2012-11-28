@@ -117,9 +117,9 @@ int cmd_trace_end(const Vector<String> &args)
 
 int cmd_repo_backtrace_start(const Vector<String> &args)
 {
-    if (args.size() < 3 || args[2] == "master") {
-        printf("Usage: backtrace path_to_backtrace branch_name\n");
-        printf("branch_name cannot be 'master'");
+    if (args.size() < 4 || args[2] == "master") {
+        printf("Usage: backtrace path_to_backtrace branch_name commit_id\n");
+        printf("branch_name cannot be 'master'\n");
         return -1;
     }
 
@@ -128,7 +128,9 @@ int cmd_repo_backtrace_start(const Vector<String> &args)
         return 0;
     }
 
+    tracer->InitBacktrace(args[2], args[3]);
     tracer->StartBacktrace(args[2], args[1]);
+    tracer->Checkout(args[2]);
 
     return 0;
 }

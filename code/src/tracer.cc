@@ -64,6 +64,12 @@ void Tracer::Trace()
     sleep(config_->time_interval_s());
 }
 
+int Tracer::InitBacktrace(const String& branch_name, const String& commit_id)
+{
+    vcs->BranchCreate(repo_path_, branch_name, commit_id);
+    return 0;
+}
+
 // Start backtrace
 int Tracer::StartBacktrace(const String& branch_name, const String& pathname)
 {
