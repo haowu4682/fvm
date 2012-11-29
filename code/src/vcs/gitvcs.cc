@@ -668,14 +668,6 @@ int CreateObjectRecursive(
     DBG("path:%s, branch:%s, required branch:%s", relative_path.c_str(),
             source_branch_name.c_str(), branch_name.c_str());
 
-    if (!IsIncluded(relative_path) || source_branch_name != branch_name) {
-        if (old_object_oid != NULL) {
-            git_oid_cpy(source_oid, old_object_oid);
-            return 0;
-        }
-        return 1;
-    }
-
     if (source_stat == NULL) {
         source_stat = &source_stat_buf;
     }
@@ -683,6 +675,14 @@ int CreateObjectRecursive(
     stat(source_path.c_str(), source_stat);
 
     if (S_ISREG(source_stat->st_mode)) {
+        // TODO Optimize, do not check sub directory
+        if (!IsIncluded(relative_path) || source_branch_name != branch_name) {
+            if (old_object_oid != NULL) {
+                git_oid_cpy(source_oid, old_object_oid);
+                return 0;
+            }
+            return 1;
+        }
 
         // Create a blob for the file
         rc = git_blob_create_fromdisk(source_oid, repo, source_path.c_str());
@@ -917,6 +917,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
 
     git_reference *head_ref;
     git_oid partial_oid, old_commit_id, new_commit_id;
+    const git_oid *old_commit_tree_id;
     git_tree *new_commit_tree, *old_commit_tree;
     git_commit *old_commit, *new_commit;
 
@@ -954,6 +955,8 @@ int GitVCS::PartialCommit(const String& repo_pathname,
         return rc;
     }
 
+    old_commit_tree_id = git_tree_id(old_commit_tree);
+
 #ifdef DEBUG
     DBG("old commit tree: ");
     PrintOid(git_tree_id(old_commit_tree));
@@ -962,7 +965,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
 
     // Step 4: Create partial trees
     rc = CreateObjectRecursive(&partial_oid, NULL, repo, branch_name,
-            work_dir, relative_path, &old_commit_id, IsIncluded, GetBranch);
+            work_dir, relative_path, old_commit_tree_id, IsIncluded, GetBranch);
     if (rc < 0) {
         LOG("Failed to create the partial tree!");
         return rc;
