@@ -716,7 +716,9 @@ int CreateObjectRecursive(
         // Create a tree builder for the directory, use old tree information if
         // possible.
         git_treebuilder *tree_builder;
-        git_treebuilder_create(&tree_builder, old_tree);
+        // HAO do not include files that have been deleted!
+        //git_treebuilder_create(&tree_builder, old_tree);
+        git_treebuilder_create(&tree_builder, NULL);
 
         while ((directory_entry = readdir(directory)) != NULL) {
             // Skip "." and ".."
