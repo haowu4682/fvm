@@ -413,6 +413,24 @@ struct GitTreeWriteCallbackPayload {
 //    GitTreeEntryName info;
 };
 
+// TODO Remove replication
+String GetRealPath(const char *root)
+{
+    std::ostringstream os;
+
+    // Divide the combine point
+    Vector<String> path_list;
+    split(root, "/", path_list, 0);
+
+    for (int i = 0; i < path_list.size(); ++i)
+    {
+        GitTreeEntryName entry(path_list[i]);
+        os << entry.name << "/";
+    }
+
+    return os.str();
+}
+
 int GitTreeWriteCallback(const char *root,
         const git_tree_entry *entry,
         void *payload)
@@ -431,7 +449,7 @@ int GitTreeWriteCallback(const char *root,
 
     // Step 2 Get child path
     std::ostringstream file_name_stream;
-    file_name_stream << *data->destination << "/" << root;
+    file_name_stream << *data->destination << "/" << GetRealPath(root);
     file_name_stream << tree_entry_name.name;
     String file_name = file_name_stream.str();
     DBG("destination:%s, root:%s, name:%s", data->destination->c_str(),
