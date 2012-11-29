@@ -669,7 +669,10 @@ int CreateObjectRecursive(
             source_branch_name.c_str(), branch_name.c_str());
 
     if (!IsIncluded(relative_path) || source_branch_name != branch_name) {
-        git_oid_cpy(source_oid, old_object_oid);
+        if (old_object_oid != NULL) {
+            git_oid_cpy(source_oid, old_object_oid);
+            return 0;
+        }
         return 1;
     }
 
@@ -760,7 +763,7 @@ int CreateObjectRecursive(
                 return rc;
             }
 
-            if (rc == 0 || rc == 1) {
+            if (rc == 0) {
                 // If the child is created, we shall include it into the tree
                 // builder
 
@@ -772,6 +775,8 @@ int CreateObjectRecursive(
                     DBG("tree entry name: %s", tree_entry_name_str.c_str());
                     return -1;
                 }
+            } else if (rc == 1) {
+                LOG("Inexisted path:%s", child_relative_path.c_str());
             } else {
                 LOG("ERROR! UNEXPECTED RETURN VALUE: %d", rc);
                 return -1;
