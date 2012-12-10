@@ -18,6 +18,7 @@
 #define String std::string
 #define Set std::set
 #define Map std::map
+#define MultiMap std::multimap
 #define Pair std::pair
 
 // Common macros

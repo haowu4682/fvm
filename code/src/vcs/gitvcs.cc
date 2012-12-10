@@ -847,6 +847,9 @@ int GitVCS::Checkout(const String& repo_pathname,
     git_tree *commit_tree;
     git_oid relative_oid, commit_oid;
 
+    // TODO Move into parameter
+    String username;
+
     // Step 1: Open repository
     //
     rc = git_repository_open(&repo, repo_pathname.c_str());
