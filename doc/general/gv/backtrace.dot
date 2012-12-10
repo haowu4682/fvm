@@ -1,0 +1,94 @@
+digraph repoworkdir {
+
+    compound=true;
+
+    subgraph cluster_orig {
+        root_orig -> foo_orig;
+        root_orig -> abica_orig;
+        root_orig -> besque_orig;
+        abica_orig -> foo1_orig;
+        abica_orig -> foo2_orig;
+        besque_orig -> foo3_orig;
+        besque_orig -> foo4_orig;
+
+        root_orig [label = "root"];
+        abica_orig [label = "abica"];
+        besque_orig [label = "besque"];
+        foo_orig [label = "foo"];
+        foo1_orig [label = "foo1"];
+        foo2_orig [label = "foo2"];
+        foo3_orig [label = "foo3"];
+        foo4_orig [label = "foo4"];
+        label = "repository";
+        color = black;
+    }
+
+    subgraph cluster_master {
+        root_master -> foo_master;
+        root_master -> abica_master;
+        root_master -> besque_master;
+        abica_master -> foo1_master;
+        abica_master -> foo2_master;
+        besque_master -> foo3_master;
+        besque_master -> foo4_master;
+
+        root_master [label = "root"];
+        abica_master [label = "abica"];
+        besque_master [label = "besque"];
+        foo_master [label = "foo'"];
+        foo1_master [label = "foo1"];
+        foo2_master [label = "foo2"];
+        foo3_master [label = "foo3'"];
+        foo4_master [label = "foo4'"];
+        label = "repository";
+        color = black;
+    }
+
+    subgraph cluster_branch {
+        root_branch -> foo_branch;
+        root_branch -> abica_branch;
+        root_branch -> besque_branch;
+        abica_branch -> foo1_branch;
+        abica_branch -> foo2_branch;
+        besque_branch -> foo3_branch;
+        besque_branch -> foo4_branch;
+
+        root_branch [label = "root"];
+        abica_branch [label = "abica"];
+        besque_branch [label = "besque"];
+        foo_branch [label = "foo"];
+        foo1_branch [label = "foo1'"];
+        foo2_branch [label = "foo2'"];
+        foo3_branch [label = "foo3"];
+        foo4_branch [label = "foo4"];
+        label = "repository";
+        color = black;
+    }
+
+    subgraph cluster_merge {
+        root_merge -> foo_merge;
+        root_merge -> abica_merge;
+        root_merge -> besque_merge;
+        abica_merge -> foo1_merge;
+        abica_merge -> foo2_merge;
+        besque_merge -> foo3_merge;
+        besque_merge -> foo4_merge;
+
+        root_merge [label = "root"];
+        abica_merge [label = "abica"];
+        besque_merge [label = "besque"];
+        foo_merge [label = "foo'"];
+        foo1_merge [label = "foo1'"];
+        foo2_merge [label = "foo2'"];
+        foo3_merge [label = "foo3'"];
+        foo4_merge [label = "foo4'"];
+        label = "repository";
+        color = black;
+    }
+
+    foo2_orig -> root_master [ltail = cluster_orig, lhead = cluster_master, style = dotted, label = "mainstream"];
+    foo3_orig -> root_branch [ltail = cluster_orig, lhead = cluster_branch, style = dotted, label = "new branch"];
+    foo2_master -> root_merge [ltail = cluster_master, lhead = cluster_merge, style = dotted, label = "merge"];
+    foo3_branch -> root_merge [ltail = cluster_branch, lhead = cluster_merge, style = dotted, label = "merge"];
+
+}

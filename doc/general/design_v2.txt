@@ -1,0 +1,161 @@
+1. Motivation
+
+Users need some functionalities which are not included in a normal file systems
+(e.g. ext4).
+
+(1) Version control mechanisms, which include:
+
+    * Rollback to previous point
+
+    * Make a branch & Merge from another branch
+
+(2) Sharing between users, which include:
+
+    * A user could view and modify a subset of another user's files
+
+    * A user could specify which files could be accessed by another user
+
+    * A user could know who makes a specified modification.
+
+    * A user could specify the timing when the other users could view the user's
+      modification.
+
+An sample usage of the system is Repair From Chair. A repairer needs the ability
+to modify a subset of the owner's file system, can only access the
+files that the owner allows him to access, and notify the owner of the
+modifications only when the repair has finished his work.
+
+Another example is the sharing between co-workers. Alice and Bob works on a
+project. Bob wants to view some code and experiment data from Alice, but is not allowed
+to access other files from Alice. Bob could modify some code and run experiment
+on his own, and submit those to Alice when it is mature. Bob can also rollback
+to see Alice's previous versions of the code.
+
+A Version Control System (VCS) like Git has some of the functionalities. However
+it lacks the ability to restrict the ability of a user to viewing and modifying
+only a subset of another user's files. One basic difficulty here is that the
+ability to checkout a commitment (which is important in version control) is in
+conflict with the ability to restrict the permissions to only access a part of
+the repository. The reason is that in order to checkout a commitment, a user
+needs to access some global information from the commitment, i.e. the directory
+tree in order to find the place of the subset of files the user wants to access.
+
+A good design of VCS could reduce the amount of information leaked, but could
+not eliminate it. Most frequently used VCS does not even consider this
+problem. The reason is that VCS is often designed for co-workers to share their
+work, in which case the co-workers could trust each other and make no
+restrictions for accessing and modifying files in a repository.
+
+Another problem in VCS is that most VCS does not provide the ability to checkout
+and modify a subset of a repository: the user must copy everything from the
+repository. The reason is that VCS is designed to maintain a project (which is
+small compared to the whole file system), and the user needs everything in a
+repository when the user needs to checkout it since the repository is an
+integral part. (For example, if a repository is a software project, it doesn't
+make sense for a user to checkout only a part of the code.) As a result, VCS
+does not need to provide the ability to checkout a subset of files. However,
+when we apply the VCS to the whole file system, the problem arises. For example,
+when a user needs to checkout "fvm" directory, there is absolutely no need to
+checkout everything from "My Photo" directory.
+
+We propose FVM, which inherits the idea of VCS, and builds some own techniques,
+   including: [from outline bullets]
+    - FVM uses partial checkout and partial commit.
+        # A partial checkout is the behavior to checkout a subset of files in a
+          repository to a work directory. All the other files remain the same.
+        # A partial commit is the behavior to commit a subset of files in a work
+          directory to a repository. All the other files will remain the same as
+          the last commit in the repository.
+    - FVM uses partial backtrace mode to manage rollback
+        # "git checkout && git branch"
+        # Checkout specified commitment for some user-specified files.
+        # FVM stops making automatic commitment for those files. The files in
+          the repository will remain the same as the last commit before the backtrace mode.
+        # FVM makes commitment of those files into a new-generated branch.
+        # FVM allows the user to merge the new-generated branches with the old
+          one when the user wants to. The user could also choose to abandon the
+          modifications.
+    - FVM uses packages to manage the record that which files are being shared.
+    - FVM uses FVM Daemon to solve the permission problem during sharing.
+        # The FVM Daemon resides on the server side, which has permissions to
+          all users.
+        # FVM Daemon applies partial checkout and partial commit.
+
+FVM has the following challenges. [TODO: copy challenges from outline-bullets.txt]
+
+TODO: Summarize evaluation part.
+
+
+
+2. Design
+
+2.1 Repository and Workdir
+
+A *repository* is a database which stores files and directories of a file
+system. The machine containing a repository is called a *server*.
+
+A *workdir*, or work directory, is a directory in a file system which is used to
+contain a subset of files from a repository, and allows the user to view and
+modify. (A user cannot view and modify files from a repository directly.) The
+machine containing a workdir is called a *client*. The client and the server
+could be the same machine.
+
+An FVM Daemon is running on the server. When the client wants to access a subset
+of files in a repository and put them in a workdir, the client sends a request
+to the FVM Daemon, and the FVM Daemon performs a related action. The details are
+in following subsections.
+
+gv/workdir.pdf shows the relationship between repository and workdir.
+
+gv/server.pdf shows the relationship between server and client.
+
+
+
+2.2 Commitment
+
+A commitment is a snapshot of files. Each directory is represented by a tree and
+each file is represented by a blob.
+
+A commitment can have a parent commitment which is created before the
+commitment. A repository is a directed acyclic graph (DAG).
+
+A branch is a reference to a commitment (the branch head).
+
+These are basically git data model.
+
+
+
+2.3 Partial Checkout and Commit
+
+In FVM, a user can checkout only a subset of files in a repository. This kind of
+action is called "partial checkout". Reversely, the action that only commits a
+subset of files is called "partial commit". "gv/partial.pdf" shows how the two
+actions work.
+
+
+
+2.4 Backtrace Mode
+
+Backtrace mode serves as a combination of branching and checkout old commitment.
+The command format is like "backtrace relative_path branch commit_id". The commands
+does the following things"
+
+(1) Performs a partial checkout for relative_path and commit_id
+(2) In the future, when FVM needs to make a commit, it makes a partial
+commitment for relative_path to branch, and makes a partial commitment for files
+not in relative_path to "master" branch. gv/backtrace.pdf shows how it works.
+
+When the user does not need the backtrace mode, he can merge the branch to
+"master" branch. FVM provides three options for the merge: abandon the changes;
+overwrite the master branch with the changes, or performs a three-way merge
+(need user's action). In the future FVM will not make a partial commitment for
+the relative path any more.
+
+The most important usage for backtrace mode is to "hide" changes. When a user
+uses backtrace mode, the changes of files in relative_path go to a specified
+branch, which is not explicitly visible by other users. Only the user's local
+machine explicitly sees those changes, until the user merge the branch to
+"master" branch. So backtrace mode could also be called "local mode".
+
+
+

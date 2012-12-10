@@ -1,0 +1,28 @@
+digraph repoworkdir {
+
+    subgraph cluster_repo {
+        root -> foo;
+        root -> abica;
+        root -> besque;
+        abica -> foo1;
+        abica -> foo2;
+        besque -> foo3;
+        besque -> foo4;
+        label = "repository";
+        color = black
+    }
+
+    subgraph cluster_workdir {
+        color = black;
+        abica_w-> foo1_w;
+        abica_w -> foo2_w;
+
+        abica_w [label = "abica"];
+        foo1_w [label = "foo1"];
+        foo2_w [label = "foo2"];
+        label = "work dir"
+    }
+
+    abica -> abica_w [style = dotted];
+
+}

@@ -493,7 +493,19 @@ to the backtrace mode of a single repository.
 
 
 
-2.5 Summary
+2.5 Alternative Design to FVM Daemon
+
+2.5.1 Overview
+
+In section 2.4.3 we used FVM Daemon to help 
+
+
+
+2.5.2 Design
+
+
+
+2.6 Summary
 
 The following graph shows the relationship between everything.
 

@@ -1,0 +1,24 @@
+digraph network {
+
+    subgraph cluster_client {
+        color = black;
+        fvm_client [label = "FVM Client", shape = square];
+        fs_client [label = "File System", shape = square];
+        label = "client";
+    }
+
+    subgraph cluster_server {
+        color = black;
+        fvm_server [label = "FVM Daemon", shape = square];
+        vcs_server [label = "VCS", shape = square];
+        fs_server [label = "File System", shape = square];
+
+        fvm_server -> vcs_server;
+        vcs_server -> fs_server;
+        label = "server"
+    }
+
+    fs_client -> fs_server;
+    fs_server -> fs_client;
+    fvm_client -> fvm_server [label = "request"];
+}

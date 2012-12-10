@@ -1,0 +1,74 @@
+digraph repoworkdir {
+
+    compound=true;
+
+    subgraph cluster_repo_orig {
+        root_orig -> foo_orig;
+        root_orig -> abica_orig;
+        root_orig -> besque_orig;
+        abica_orig -> foo1_orig;
+        abica_orig -> foo2_orig;
+        besque_orig -> foo3_orig;
+        besque_orig -> foo4_orig;
+
+        root_orig [label = "root"];
+        abica_orig [label = "abica"];
+        besque_orig [label = "besque"];
+        foo_orig [label = "foo"];
+        foo1_orig [label = "foo1"];
+        foo2_orig [label = "foo2"];
+        foo3_orig [label = "foo3"];
+        foo4_orig [label = "foo4"];
+        label = "repository";
+        color = black;
+    }
+
+    subgraph cluster_repo_final {
+        root_final -> foo_final;
+        root_final -> abica_final;
+        root_final -> besque_final;
+        abica_final -> foo1_final;
+        abica_final -> foo2_final;
+        besque_final -> foo3_final;
+        besque_final -> foo4_final;
+
+        root_final [label = "root"];
+        abica_final [label = "abica'"];
+        besque_final [label = "besque"];
+        foo_final [label = "foo"];
+        foo1_final [label = "foo1'"];
+        foo2_final [label = "foo2'"];
+        foo3_final [label = "foo3"];
+        foo4_final [label = "foo4"];
+        label = "repository";
+        color = black;
+    }
+
+    subgraph cluster_workdir_orig {
+        color = black;
+        abica_o-> foo1_o;
+        abica_o -> foo2_o;
+
+        abica_o [label = "abica"];
+        foo1_o [label = "foo1"];
+        foo2_o [label = "foo2"];
+        label = "work dir"
+    }
+
+    subgraph cluster_workdir_final {
+        color = black;
+        abica_f-> foo1_f;
+        abica_f -> foo2_f;
+
+        abica_f [label = "abica'"];
+        foo1_f [label = "foo1'"];
+        foo2_f [label = "foo2'"];
+        label = "work dir"
+    }
+
+    abica_orig -> abica_o [ltail = cluster_repo_orig, lhead = cluster_workdir_orig, style = dotted, label = "partial checkout"];
+    foo2_o -> abica_f [ltail = cluster_workdir_orig, lhead = cluster_workdir_final, style = solid, label = "user modification"];
+    foo1_f -> abica_final [ltail = cluster_workdir_final, lhead = cluster_repo_final, style = dotted, label = "partial commit"];
+    abica_orig -> abica_final [ltail = cluster_repo_orig, lhead = cluster_repo_final, style = dashed, label = "repository evolution"];
+
+}

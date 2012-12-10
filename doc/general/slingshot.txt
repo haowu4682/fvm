@@ -1,0 +1,29 @@
+The data model for FVM could applied to Slingshot with some modifications.
+
+1. Overview
+
+The motivation for Slingshot is to rebase machine states. Assume starting from
+state A the machine goes to state B and C like the following:
+
+A ----> B
+  |
+  ----> C
+
+What we want is to perform all the actions in A->C at state B, making it like:
+
+A ----> B ----> C'
+
+If we consider the machine states to be file system states, the abstraction is
+similar to FVM. We can say that A, B and C are 3 commitments. The user enters
+backtrace mode at A. C is the mainstream and B is a branch. The user wants to
+exit backtrace mode at this point, and the merge policy is to perform all the
+"actions" in A->C at commitment B.
+
+
+
+2. Solution
+
+Record the action list at each commitment. Replay the action while the user
+performs a "merge". The method for recording and replaying is in the Slingshot
+documentation.
+
