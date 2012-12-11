@@ -1,3 +1,23 @@
+
+ MW: high-level: this document is very clear. very nice work!!!!
+
+   I think that if we come up with a few scenarios where we need both
+   VC and sharing then we will be in good shape. Perhaps add a section
+   called "Motivating scenarios", and outline them all? Then later in
+   the paper you can show how the mechanisms that you provide can
+   support the scenarios?
+
+   If the mechanisms that you have support several possible scenarios,
+       then I think this thing would make a nice submission to Usenix
+       ATC...
+
+     MW: maybe do s/commitment/commit/g. I think that in git, the object is
+     called a "commit", not a "commitment". (But in general, "commit" is a
+             verb, and "commitment" is a noun, so I would have guessed that
+            your
+             usage is the correct one. Still, I hear people use the term "git
+             commit"....)
+
 1. Motivation
 
 Users need some functionalities which are not included in a normal file systems
@@ -128,7 +148,7 @@ These are basically git data model.
 2.3 Partial Checkout and Commit
 
 In FVM, a user can checkout only a subset of files in a repository. This kind of
-action is called "partial checkout". Reversely, the action that only commits a
+action is called "partial checkout". Similarly, the action that only commits a
 subset of files is called "partial commit". "gv/partial.pdf" shows how the two
 actions work.
 

@@ -7,11 +7,10 @@ S2 Motivation
 because they're not fully defined or because the problem itself is a
 bit tough to define. That's fine, and in fact could be a challenge
 that we could identify. See below.]
-    - Different Users could share files
+
+    - Different Users could share files, while maintaining their separated work
+      directory.
         # A user could share a subset of another user's files.
-        # A user may have no permission to access files that the user does not
-          need to share.
-    - Users who share files work independently
         # A user is working on the shared files as if no one else is using them.
         # The changes of different users are separately recorded.
         # A user could see the update of other users at some time (e.g. when
@@ -19,6 +18,11 @@ that we could identify. See below.]
         # Every user should see the same content when the user
           "synchronizes" with others. In git, "synchronize" means "git fetch"
           and "git merge".
+
+    - The system maintains access control information for shared files.
+        # A user may have no permission to access files that the user does not
+          need to share.
+        # A Unix permission control mechanism is a good one.
 
     [MW: try to bring out the technical challenge here, namely that:
     it's not even clear how to *define* what the system could do, since
@@ -99,6 +103,20 @@ S3 Challenges
 [MW: suggest adding an earlier challenge as the first one: defining the
 abstractions that will help the system balance VC and AC. (but I'm not
 sure what solution you have in mind for that.)]
+[HW: See section S3.0]
+
+S3.0 The tradeoff between snapshot(version control), separation in sharing,
+    and access control
+    - VCS(Git, etc.) provide snapshot and separation, but no good access
+      control.
+    - NFS+backup system(fsync, etc.) provides snapshot and access control, but
+      no separation in sharing.
+    - Clone solution (everyone download files from server to local machine,
+      modify them and upload back to the server) provides access control
+      and separation, but no snapshot.
+        # An application for this is distributing homeworks in a course. Every
+          student downloads the standard version from the teacher's site, modify
+          it, and upload the result.
 
 S3.1 The tradeoff between the ability to rollback and the cost to record past
     versions
