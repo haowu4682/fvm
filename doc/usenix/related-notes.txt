@@ -1,0 +1,18 @@
+1. Overview
+
+2. Centralized Revision Control
+CVS/SVN
+
+3. Distributed Revision Control
+Git
+
+Mercurial
+very similar to git see local/mercurial*.png
+
+BitKeeper
+
+Rational ClearCase
+
+Vesta
+
+

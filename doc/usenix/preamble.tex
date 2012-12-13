@@ -1,0 +1,195 @@
+% This is stuff that is required for the document to compile. It is not
+% related to formatting. 
+\usepackage[pdftex]{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs}  % for tables
+\usepackage{dcolumn}   % for tables
+%\usepackage{hhline}   % for tables
+\usepackage{multirow}  % for tables
+\usepackage{rotating}
+\usepackage{xspace}
+\usepackage{hyphenat}  % supplies \hyp{}, which tells tex that it can 
+		       % hyphenate at an existing hyphen
+\usepackage{color}
+\usepackage{enumerate}
+
+\usepackage{textcomp}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{lastpage}
+\usepackage{tabularx}
+\usepackage{pifont}
+
+\usepackage{ulem}
+\normalem
+
+\usepackage[table]{xcolor}
+\usepackage{colortbl} % colorful columns and rows
+\usepackage{array}    % needed for 'b' argument in tabular preamble
+
+\definecolor{lightgray}{rgb}{.9,.9,.9}
+\definecolor{darkgray}{rgb}{.4,.4,.4}
+
+%\usepackage[margin=0.99in]{geometry}
+%\usepackage{algorithm}
+%\floatname{algorithm}{Pseudocode}
+\usepackage{algpseudocode}
+\algrenewcomment[1]{\hfill// #1}%
+\algnotext{EndFunction}                % Python-style indentation
+\algnotext{EndFor}                     % Python-style indentation
+
+\usepackage[noeka]{mathrmletter}
+\usepackage{arydshln}
+
+\newif\ifintrouble
+\newif\ifcuttext
+
+%% UNCOMMENT FOLLOWING LINE IN CASE OF EMERGENCY
+%\introubletrue
+\ifintrouble
+\cuttexttrue
+\else
+\cuttextfalse
+\fi
+
+% peanut gallery comments
+% NOTE: Comment out the line below if you want a draft with no red comments.
+% NOTE: Commenting out this line may replace some of the red comments with 
+%       extra spaces or newlines.
+%\def\noeditingmarks{}
+%
+
+%\newcommand{\textred}[1]{\textcolor{red}{#1}}
+\newcommand{\textred}[1]{\begingroup \color{red} #1\endgroup}
+\ifx\noeditingmarks\undefined
+   \newcommand{\pgwrapper}[2]{\textred{#1: #2}}
+   \newcommand{\pgwrapperb}[1]{\textbf{#1}}
+\else
+   \newcommand{\pgwrapperb}[1]{}
+   \newcommand{\pgwrapper}[2]{}
+\fi
+\newcommand{\hw}[1]{\pgwrapper{HW}{#1}}
+\newcommand{\mw}[1]{\pgwrapper{MW}{#1}}
+% end peanut gallery comments
+
+\newcommand{\annoyingsize}{\fontsize{7.5}{9}\selectfont}
+\newcommand{\moreannoyingsize}{\fontsize{7.3}{8.8}\selectfont}
+% definitions for MP
+\def\hn{\usefont{OT1}{phv}{mc}{n}\selectfont}
+\def\hb{\usefont{OT1}{phv}{bc}{n}\selectfont}
+\newcommand{\mpfont}{\hn\scriptsize}
+\newcommand{\MPworker}[1]{{\color{red}\vrule\vrule}{\marginpar{\color{red}\mpfont #1}}}
+\ifx\noeditingmarks\undefined
+    \newcommand{\HP}[1]{\MPworker{HW: #1}}
+    \newcommand{\MP}[1]{\MPworker{MW: #1}}
+\else
+   \newcommand{\HP}[1]{}
+   \newcommand{\MP}[1]{}
+\fi
+\setlength{\marginparwidth}{19mm}
+\setlength{\marginparsep}{0.35mm}
+
+\ifx\noeditingmarks\undefined
+    \newcommand{\changebars}[2]{%
+    [{\em \begingroup #1 \endgroup}][\sout{#2}]}
+\else
+    \newcommand{\changebars}[2]{#1}
+\fi
+
+\newcommand{\theSection}[1]{\S\ref{#1}}
+%\newcommand{\theSection}[1]{Section~\ref{#1}}
+\newcommand{\techReportOnly}[1]{}
+
+\newcommand{\circledone}{\ding{192}\xspace}
+\newcommand{\circledtwo}{\ding{193}\xspace}
+\newcommand{\circledthree}{\ding{194}\xspace}
+\newcommand{\circledfour}{\ding{195}\xspace}
+\newcommand{\circledfive}{\ding{196}\xspace}
+\newcommand{\filledone}{\ding{202}\xspace}
+\newcommand{\filledtwo}{\ding{203}\xspace}
+\newcommand{\filledthree}{\ding{204}\xspace}
+\newcommand{\filledfour}{\ding{205}\xspace}
+\newcommand{\filledfive}{\ding{206}\xspace}
+
+\newcommand{\ie}{i.e.}
+\newcommand{\eg}{e.g.}
+\newcommand{\ea}{et al.}
+\newcommand{\eans}{et al.}
+
+\newcommand{\sys}{FVM\xspace}
+\newcommand{\Sys}{\sys}
+
+\newcommand{\retro}{\textsc{Retro}\xspace}
+\newcommand{\ptrace}{\textsc{ptrace}\xspace}
+
+%\def\compactify{\leftmargin=\parindent \itemsep=0.01pt \topsep=0.01pt \partopsep=0pt \parsep=0.01pt}
+\def\compactify{\itemsep0in \topsep2pt \parsep=0.00in \partopsep=0pt \leftmargin4em}
+\let\latexusecounter=\usecounter
+\newenvironment{CompactItemize}
+  {\def\usecounter{\compactify\latexusecounter}
+   \begin{itemize}}
+  {\end{itemize}\let\usecounter=\latexusecounter}
+\newenvironment{CompactEnumerate}
+  {\def\usecounter{\compactify\latexusecounter}
+   \begin{enumerate}}
+  {\end{enumerate}\let\usecounter=\latexusecounter}
+\newenvironment{myenumerate}
+  {\def\usecounter{\compactify\latexusecounter}
+   \begin{enumerate}}
+  {\end{enumerate}\let\usecounter=\latexusecounter}
+
+\def\compactparspace{\itemsep=0ex \topsep1ex \parsep=1ex \partopsep=0pt
+\leftmargin\parindent}
+\newenvironment{myenumerate2}
+  {\def\usecounter{\compactparspace\latexusecounter}
+   \begin{enumerate}}
+  {\end{enumerate}\let\usecounter=\latexusecounter}
+
+
+\def\compactforsummary{\itemsep0pt \topsep0pt \parsep=0ex
+\partopsep=0pt \leftmargin\parindent}
+\newenvironment{myenumerate3}
+  {\def\usecounter{\compactforsummary\latexusecounter}
+   \begin{enumerate}}
+  {\end{enumerate}\let\usecounter=\latexusecounter}
+
+
+
+\newenvironment{myitemize}%
+  {\begin{list}{\labelitemi}{\itemsep0in \topsep2pt \parsep0.00in
+  \partopsep=0pt \leftmargin\parindent}}%
+  {\end{list}}
+
+\newenvironment{myitemize2}%
+  {\begin{list}{\labelitemi}{\itemsep6pt \topsep6pt \parsep0.00in
+  \partopsep=0pt \leftmargin\parindent}}%
+  {\end{list}}
+
+\newenvironment{myitemize3}%
+  {\begin{list}{\labelitemi}{\itemsep3pt \topsep3pt \parsep0.00in
+  \partopsep=0pt \leftmargin\parindent}}%
+  {\end{list}}
+
+
+\newcommand{\astskip}{\smallskip\noindent\parbox{\linewidth}
+			{\center*\hspace{2.5em}*\hspace{2.5em}*\medskip\smallskip}}
+
+\def\discretionaryslash{\discretionary{/}{}{/}}
+{\catcode`\/\active
+\gdef\URLprepare{\catcode`\/\active\let/\discretionaryslash
+        \def~{\char`\~}}}%
+\def\URL{\bgroup\URLprepare\realURL}%
+\def\realURL#1{\tt #1\egroup}%
+
+\newcommand{\tmidrule}{\midrule[0.02em]}
+
+%\renewcommand{\dbltopfraction}{0.1}
+
+\newcommand{\defterm}[1]{\emph{\textbf{#1}}}
+
+% Local Variables:
+% tex-command: "gmake;:"
+% tex-main-file: "cic10.ltx"
+% tex-dvi-view-command: "gmake preview;:"
+% End:
