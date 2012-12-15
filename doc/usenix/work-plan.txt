@@ -1,0 +1,27 @@
+1. Overview
+
+The remaining work could be divided into 3 parts: implementation, documentation
+and evaluation.
+
+Important dates:
+Jan 23 Official Abstract Due
+Jan 30 Final Submission Due
+
+2. Implementation
+
+Currently the remaining work is to finish access control part. This roughly
+takes 2 days. It is due Dec 18.
+
+3. Documentation
+
+(1) Introduction. First draft due Dec 21
+
+(2) Design sections. Work start after the written of introduction part. First
+draft due Jan 4.
+
+(3) Related works, discussions and others. First draft due Jan 4
+
+To sum up, we shall have the first draft for paper (except for evaluation part)
+due Jan 4. For evaluation part see "eval-plan.txt".
+
+

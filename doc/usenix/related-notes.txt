@@ -1,18 +1,112 @@
 1. Overview
 
-2. Centralized Revision Control
-CVS/SVN
+Revision control systems are often used in software development. There are quite
+a lot of such kind of systems in use historically or currently. However, most of
+them lack several important properties. Firstly, most systems do not have good
+mechanism for grouping versioned files: they often provide no user method to
+access a subset of a repository (though there are exceptions). Secondly, most
+systems have no good access control method, they are often designed to use
+all-or-none mechanism: a user either could visit everything in a repository, or
+nothing.
 
-3. Distributed Revision Control
-Git
+2. Revision Control
 
-Mercurial
-very similar to git see local/mercurial*.png
+2.1 Client-Server Model
 
-BitKeeper
+The client-server model is a model that every user shares the same repository on
+the server, and the client does every command throughout the server.
 
-Rational ClearCase
+RCS/CVS/SVN
+
+Revision Control System (RCS)\cite{tichy82rcs} is used to maintain versions for a single file. It
+has the basic functionalities such as creating, logging and merging versions.
+Its disadvantage point is that it is designed to maintain versions for each
+single file. It does not provide a clear interface for combining different files
+into a repository.
+
+Concurrent Versions System (CVS)\cite{cvs} is a client-server model version control
+system. It improves RCS and supports grouping of files in a repository. It also
+allows different users to share a repository. However there are drawbacks for
+CVS. The client must connect to the server to perform normal version control
+actions. Also there is not a global state of versions - each file still has its
+own versioning.
+
+Apache Subversion (SVN)\cite{svn} is a successor of CVS. SVN has a similar data model and
+user's point of view with CVS. It allows more functions to be executed locally
+on the client side. However, it is still a client-server model, making the main
+problems of CVS still exist in SVN.
+
+ClearCase
+
+ClearCase is a software configuration management (SCM) system. It provides versioning
+by using dynamic views. A view is a method to map normal files into versioned
+files. The view provides a way to automatically group file versions. However,
+views in ClearCase are often just snapshot views which is just similar to a
+regular commitment, or dynamic views which map into the most recent versions of
+files.
 
 Vesta
 
+Vesta is a a SCM system created by Compaq Inc. Its basic data elemement is
+package. A package is a group of related files. The packages are in a
+hierarchical structure.
+
+Vesta's mechanisms for checkout and commit are also based on packages, so it
+provides a mechanism similar to partial checkout and partial commit with \sys.
+A user can checkout a package to client side, modify it and checkin it into the
+repository.
+
+However Vesta still has its deficiencies. Vesta does not provide concurrency
+modification. If a user has already checked out a version of a package, other
+user who wants to checks out the same version cannot check in modifications of the
+same package. The branch specification for Vesta is awkward, and it only
+supports branching for each package instead of the whole repository. Finally it
+has no solution for access control problem.
+
+
+
+2.2 Distributed Model
+
+In a distributed model, every user owns a repository which could operate
+independently. The repositories could communicate with each other.
+
+GNU Arch/Monotone
+
+GNU Arch\cite{gnuarch} is a deprecated distributed revision control system.
+Monotone\cite{monotone} is a similar system. They both use distributed models.
+
+Darcs
+
+Darcs\cite{darcs} is another distributed revision control system. It records
+changes instead of file versions. The performance of Darcs is questionable.
+
+
+
+BitKeeper
+
+BitKeeper\cite{bitkeeper} is a commercial revision control system. It stores the change set in
+each commitment. There is nothing particular in that.
+
+Mercurial
+
+Mercurial is designed to be an alternative to BitKeeper. It stores file deltas
+in data storage. It uses data model called revlogs\cite{mackall06mercurial} to
+retrieve full files from the data. Its user interface is similar with Git.
+
+
+Git
+
+Git\cite{git} is a popular revision control tool. Unlike normal tools, Git
+stores every single version of file as an independent blob. Each commit is a
+hierarchical structure of blobs. This kind of data model makes it very easy to
+checkout a previous commit and to create a new branch. However it makes a
+repository containing a lot of redundant information for files.
+
+Git submodule seems to be a solution for partial checkout or partial commit, but
+it is not. The reason is that each submodule is actually an independent git
+repository, making it impossible (or at least very difficult) to share a subset
+of a repository. Another deficiency for git submodule is that it does not
+provide a hierarchical structure, making it difficult to manage the submodules
+when the repository is becoming huge. Git also does not have good solutions for
+access control.
 

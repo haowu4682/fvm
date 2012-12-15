@@ -167,6 +167,21 @@ for that.
 
 
 
+2.3.5 Access Control Model
+
+In each commitment, FVM records an access list which records the users in each
+group, like:
+
+falcon: mwalfish, leners, haowu, etc.
+
+In each checkout, FVM only checks out the files that the user has "read"
+permission, using the information in the access list.
+
+In each commitment, FVM keeps old versions of those files that the user has not "write"
+permission.
+
+
+
 2.4 Multi-User Mode (Sharing Mode)
 
 Given that the users do not share files (i.e. at most one user is accessible to

@@ -107,7 +107,7 @@ TODO: Summarize evaluation part.
 
 
 
-2. Design
+2. Data Model
 
 2.1 Repository and Workdir
 
@@ -176,6 +176,31 @@ uses backtrace mode, the changes of files in relative_path go to a specified
 branch, which is not explicitly visible by other users. Only the user's local
 machine explicitly sees those changes, until the user merge the branch to
 "master" branch. So backtrace mode could also be called "local mode".
+
+
+
+3. Motivation Samples
+
+Unlike Git, Mercurial and other distributed revision control systems, FVM cannot
+run on the client side independently. Also there shall be a underlying shared
+file system for the users to share work directories. So the setting for all the
+samples are: every user in the system are on a company/research institute
+network file system (say it is NFS).
+
+(1) A is a manager of a commercial software. B is a new employee to the company.
+A wants B to work on user interface design, but does not want B to access old
+version when B has not joined the group, or code that B is not working on (e.g.
+a commercial secret).
+
+(2) A is a professor, B C and D are 3 students. A assigns an assignment to the
+students. Each student could only see his/her own piece of work, but A needs to
+see all of the students' work. A also wants to see intermediate points to see if
+the students are working well.
+
+(3) A is a computer owner, and B works for a repair shop. A wants B to fix a
+software problem. B may install new software, checkout previous version, or use
+different configuration to fix the problem, but is not allowed to visit A's
+private data (e.g. personal pictures).
 
 
 
