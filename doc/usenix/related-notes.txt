@@ -45,6 +45,8 @@ views in ClearCase are often just snapshot views which is just similar to a
 regular commitment, or dynamic views which map into the most recent versions of
 files.
 
+[MW: not sure I understand the description above.]
+
 Vesta
 
 Vesta is a a SCM system created by Compaq Inc. Its basic data elemement is

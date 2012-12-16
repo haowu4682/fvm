@@ -179,7 +179,8 @@ machine explicitly sees those changes, until the user merge the branch to
 
 
 
-3. Motivation Samples
+3. Motivating examples
+#Motivation Samples
 
 Unlike Git, Mercurial and other distributed revision control systems, FVM cannot
 run on the client side independently. Also there shall be a underlying shared
@@ -197,10 +198,20 @@ students. Each student could only see his/her own piece of work, but A needs to
 see all of the students' work. A also wants to see intermediate points to see if
 the students are working well.
 
+    [MW: above needs a bit of help. The current model for
+    professor/student collaboration is that the student types the
+    equivalent of "handin labFOO", which causes the system to copy the
+    student's directory to the professor. Why do we need everyone
+    working in the same repository? I believe that there probably are
+    good motivating examples, but the above doesn't quite get there.]
+ 
 (3) A is a computer owner, and B works for a repair shop. A wants B to fix a
 software problem. B may install new software, checkout previous version, or use
 different configuration to fix the problem, but is not allowed to visit A's
 private data (e.g. personal pictures).
 
-
+    [MW: interesting use of RFaC scenario. I'm not sure if readers will
+    buy this, since they may observe that there are far simpler ways to
+    protect one's private data, such as encrypting the directories that
+    contain the private data.]
 

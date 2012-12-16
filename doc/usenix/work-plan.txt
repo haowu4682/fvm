@@ -12,7 +12,11 @@ Jan 30 Final Submission Due
 Currently the remaining work is to finish access control part. This roughly
 takes 2 days. It is due Dec 18.
 
-3. Documentation
+3. Writing
+
+# was: Documentation
+# [MW: I think of "Documentation" as the "manual": the set of commands,
+#   the code modules, etc.]
 
 (1) Introduction. First draft due Dec 21
 
@@ -24,4 +28,4 @@ draft due Jan 4.
 To sum up, we shall have the first draft for paper (except for evaluation part)
 due Jan 4. For evaluation part see "eval-plan.txt".
 
-
+[MW: where is eval-plan.txt?]
