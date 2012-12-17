@@ -1,0 +1,39 @@
+1. Motivation
+
+Here are the questions we wish to answer in eval section:
+
+(1) What is the performance of \sys, compared to regular revision control
+systems?
+
+(2) How can \sys solve the problems that regular revision control systems could
+not solve?
+
+(3) Any other questions interested TBD.
+
+
+
+
+2. Performance experiments
+
+We compare the following aspects for \sys and regular revision control systems
+(SVN, GIT, Mercurial, etc.):
+Time cost,
+Disc space cost,
+CPU/Memory cost,
+Network cost
+
+We perform the following actions for a repository created by making a single
+commitment of a fixed set of files to an empty repository:
+make a commitment of a file,
+checkout a file
+enter branch mode (for regular systems, create a branch)
+
+To sum up, the experiment set is:
+{\sys, git, svn, mercurial, ...} * {commit, checkout, branch}
+
+In each experiment, we collect {time-cost, space-cost, cpu/memory-cost,
+    network-cost}
+
+
+
+

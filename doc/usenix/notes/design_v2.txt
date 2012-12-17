@@ -11,9 +11,9 @@
        then I think this thing would make a nice submission to Usenix
        ATC...
 
-     MW: maybe do s/commitment/commit/g. I think that in git, the object is
-     called a "commit", not a "commitment". (But in general, "commit" is a
-             verb, and "commitment" is a noun, so I would have guessed that
+     MW: maybe do s/commit/commit/g. I think that in git, the object is
+     called a "commit", not a "commit". (But in general, "commit" is a
+             verb, and "commit" is a noun, so I would have guessed that
             your
              usage is the correct one. Still, I hear people use the term "git
              commit"....)
@@ -54,10 +54,10 @@ to see Alice's previous versions of the code.
 A Version Control System (VCS) like Git has some of the functionalities. However
 it lacks the ability to restrict the ability of a user to viewing and modifying
 only a subset of another user's files. One basic difficulty here is that the
-ability to checkout a commitment (which is important in version control) is in
+ability to checkout a commit (which is important in version control) is in
 conflict with the ability to restrict the permissions to only access a part of
-the repository. The reason is that in order to checkout a commitment, a user
-needs to access some global information from the commitment, i.e. the directory
+the repository. The reason is that in order to checkout a commit, a user
+needs to access some global information from the commit, i.e. the directory
 tree in order to find the place of the subset of files the user wants to access.
 
 A good design of VCS could reduce the amount of information leaked, but could
@@ -88,10 +88,10 @@ We propose FVM, which inherits the idea of VCS, and builds some own techniques,
           the last commit in the repository.
     - FVM uses partial backtrace mode to manage rollback
         # "git checkout && git branch"
-        # Checkout specified commitment for some user-specified files.
-        # FVM stops making automatic commitment for those files. The files in
+        # Checkout specified commit for some user-specified files.
+        # FVM stops making automatic commit for those files. The files in
           the repository will remain the same as the last commit before the backtrace mode.
-        # FVM makes commitment of those files into a new-generated branch.
+        # FVM makes commit of those files into a new-generated branch.
         # FVM allows the user to merge the new-generated branches with the old
           one when the user wants to. The user could also choose to abandon the
           modifications.
@@ -133,13 +133,13 @@ gv/server.pdf shows the relationship between server and client.
 
 2.2 Commitment
 
-A commitment is a snapshot of files. Each directory is represented by a tree and
+A commit is a snapshot of files. Each directory is represented by a tree and
 each file is represented by a blob.
 
-A commitment can have a parent commitment which is created before the
-commitment. A repository is a directed acyclic graph (DAG).
+A commit can have a parent commit which is created before the
+commit. A repository is a directed acyclic graph (DAG).
 
-A branch is a reference to a commitment (the branch head).
+A branch is a reference to a commit (the branch head).
 
 These are basically git data model.
 
@@ -154,33 +154,38 @@ actions work.
 
 
 
-2.4 Backtrace Mode
+2.4 Branch Mode
 
-Backtrace mode serves as a combination of branching and checkout old commitment.
+Branch mode serves as a combination of branching and checkout old commit.
 The command format is like "backtrace relative_path branch commit_id". The commands
 does the following things"
 
 (1) Performs a partial checkout for relative_path and commit_id
 (2) In the future, when FVM needs to make a commit, it makes a partial
-commitment for relative_path to branch, and makes a partial commitment for files
+commit for relative_path to branch, and makes a partial commit for files
 not in relative_path to "master" branch. gv/backtrace.pdf shows how it works.
 
-When the user does not need the backtrace mode, he can merge the branch to
+When the user does not need the branch mode, he can merge the branch to
 "master" branch. FVM provides three options for the merge: abandon the changes;
 overwrite the master branch with the changes, or performs a three-way merge
-(need user's action). In the future FVM will not make a partial commitment for
+(need user's action). In the future FVM will not make a partial commit for
 the relative path any more.
 
-The most important usage for backtrace mode is to "hide" changes. When a user
-uses backtrace mode, the changes of files in relative_path go to a specified
+The most important usage for branch mode is to "hide" changes. When a user
+uses branch mode, the changes of files in relative_path go to a specified
 branch, which is not explicitly visible by other users. Only the user's local
 machine explicitly sees those changes, until the user merge the branch to
-"master" branch. So backtrace mode could also be called "local mode".
+"master" branch. So branch mode could also be called "local mode".
+
+Another usage for branch mode is to "separate" files. For example, a user can
+let his OS configuration files to be always in branch mode. When the OS
+configuration is corrupted due to mal-function, a inconsistent update or virus,
+the user can checkout previous commit for the OS configuration files without
+affecting all the other files.
 
 
 
-3. Motivating examples
-#Motivation Samples
+3. Motivation Samples
 
 Unlike Git, Mercurial and other distributed revision control systems, FVM cannot
 run on the client side independently. Also there shall be a underlying shared
@@ -188,6 +193,83 @@ file system for the users to share work directories. So the setting for all the
 samples are: every user in the system are on a company/research institute
 network file system (say it is NFS).
 
+(1) The owner of a repository needs to restrict the ability of a new user to
+access histories of a repository
+[Mechanism: Access Control List.]
+
+    * A is a manager of a commercial software. B is a new employee to the company.
+    A wants B to work on user interface design, but does not want B to access old
+    version when B has not joined the group.
+
+    * A is a project owner. B is a visitor. A wants B to view the current state
+    of the project, but does not allow B to see the history.
+
+(2) The owner of a repository needs to restrict the ability of a user to only a
+subset of files.
+[Mechanism: Partial Checkout/Commit, and Access Control Information.]
+
+    * A is a computer owner, and B is a repairer. A wants B to access some
+    system files and their previous versions in order for B to repair it (B may
+    need to convert some files to their older versions to fix the problem), but
+    B is not allowed to see A's private files (e.g. private photos).
+
+(3) The owner of a repository needs to separately record versions for different
+files, so that one day he can rollback a subset of files without affecting the
+other files.
+[Mechanism: Branch Mode]
+
+[HW: git submodule can do similar things. However the user can not freely move
+file between submodules and main repository because they are managed in
+different repositories. And the "submodule" has to be a certain sub-directory in
+the repository, instead of any possible combination in \sys. Partial
+replication in VESTA is similar to git submodule.
+
+Revision control systems based on file versions (CVS, SVN, etc.) could checkout
+particular files, but there is no method to group them as a "branch" in \sys, or
+a "submodule" in git.]
+
+    * A is a computer owner using Windows as a desktop OS. One day he can not
+    boot his OS any more after getting a "blue screen" message. He wishes to
+    convert the status of his C:\ partition to a stable point. However he found
+    that he has a lot of data and software configurations in
+    C:\Documents and Settings. If he converts everything back, he will lose all
+    of them. If \sys records all Windows core files in the "windows" branch in
+    branch mode, A can convert everything in that branch to a previous stable
+    commit, without affecting the user data.
+
+(4) One user of a repository may want different part of the workdir go into
+different branches.
+[Mechanism: Branch Mode]
+[HW: (3) might be a part of (4). (3) says that the user needs to make a branch
+in order to do a partial checkout. The example of (4) is that the user needs to
+make a branch because the needs a normal git branch. (In the paper deadline
+sample, the reason to make a branch is to reduce the amount of the attention of
+certain people (i.e. the professor) by making unrelated changes (i.e. experiment
+code) not to be directedly viewed by the person.)]
+
+    * A is a graduate student in a research project close to a paper deadline.
+    He has 2 major works: (1) writing the paper; (2) running experiments. The
+    update for the 2 works go into different branches. For example, all paper
+    updates go into "master" branch and all experiment updates go into
+    "experiment" branch. Using git he has to create 2 work dirs: one for the
+    paper and one for the experiment, otherwise he has to do "git checkout" very
+    frequently, which is not an efficient thing. When using \sys he can specify
+    that every file in "code/" in branch mode for the "experiment" branch, and
+    he only needs to maintain a single workdir for the project, which is easy to
+    manage.
+
+(5) One user may need to focus on the modification of a subset of a repository.
+[Mechanism: Partial checkout and partial commit]
+
+    * Same setting for the research project sample in (4). A co-author of the
+    paper (e.g. the advisor of the student) only focuses on the writing of the
+    paper, he does not care about real implementation. Then he can partial
+    checkout only the files in "doc/". He will not access and will not be
+    interrupted by the files in "code/" which he does not concern.
+
+
+
+##### Obsoleted Samples Below #####
 (1) A is a manager of a commercial software. B is a new employee to the company.
 A wants B to work on user interface design, but does not want B to access old
 version when B has not joined the group, or code that B is not working on (e.g.
