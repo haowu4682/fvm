@@ -10,22 +10,36 @@ Jan 30 Final Submission Due
 2. Implementation
 
 Currently the remaining work is to finish access control part. This roughly
-takes 2 days. It is due Dec 18.
+takes 2 days.
 
 3. Writing
 
-# was: Documentation
-# [MW: I think of "Documentation" as the "manual": the set of commands,
-#   the code modules, etc.]
+(1) Introduction.
+    TODO items:
+    - motivation samples (done)
+    - intro outline (first version)
+    - intro text
 
-(1) Introduction. First draft due Dec 21
+(2) Motivation sections. Work start after introduction part.
+    TODO items:
+    - outline
+    - text
 
-(2) Design sections. Work start after the written of introduction part. First
-draft due Jan 4.
+(2) Design sections. Work start after the written of introduction part.
+    TODO items:
+    - outline
+    - text
 
-(3) Related works, discussions and others. First draft due Jan 4
+(3) Related works, discussions and others.
+    TODO items:
+    - outline
+    - text
 
-To sum up, we shall have the first draft for paper (except for evaluation part)
-due Jan 4. For evaluation part see "eval-plan.txt".
+We shall have the first draft for paper (except for evaluation part)
+due Jan 11. For evaluation part see "eval-plan.txt".
 
-[MW: where is eval-plan.txt?]
+(4) Evaluation. Work will start after the introduction part.
+    TODO item:
+    - plan (high level idea)
+    - execution (Tracked in eval-plan.txt)
+

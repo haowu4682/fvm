@@ -1,0 +1,115 @@
+[notes/design.txt and notes/design_v2.txt has some details.]
+
+S1 Intro
+[Refer to section 1 in notes/design_v2.txt.]
+
+- Context
+    [HW: Mention it in an appropriate position.]
+
+    * Single machine or local network
+
+[HW: Problems, review of old VCS, and motivation samples could be combined
+together.]
+- Problem [This part may be mixed with motivation samples. it talks about
+    the problem which the paper addresses.]
+    [HW: Question. Shall we mention that we want to perform version control on
+    the whole file system or no?]
+
+    * version control (a.k.a revision control)
+        + create checkpoints (a.k.a "commit" in git or "revision" in svn)
+        + rollback to previous checkpoints (a.k.a "checkout" in git or svn)
+
+    * branching
+        + create an indepdent way (a.k.a "branch" in git or svn) for development
+        + each branch may contain different subset of files (git has no such
+                functionality)
+        + rollback of the files in one branch does not affect those in another
+                branch.
+        + The user can merge branches or move file from one branch to another.
+
+    * sharing and access control
+        + Different users can share one repository
+        + A user's ability can be restricted to visit a subset of files, and a
+            subset of the commit history.
+
+- Motivation Samples. [This part chooses 1-2 problems that popular version
+    control systems cannot solve, which attracts the readers' interest. It
+    explains how popular version control could not solve those problems.]
+    * Case 1: Case 1 in S3 of notes/design_v2.txt
+    * Case 2: Case 4 in S3 of notes/design_v2.txt
+    [HW: Case 2 may be omitted.]
+
+- Old version control systems. [a.k.a Related works. This part explains why
+    popular version control systems cannot solve the problems above. ]
+    [See related-notes.txt]
+    * CVS and SVN
+    * Git and Mercurial
+    * Vesta
+
+- Approach. [This part talks about basic ideas of \sys.]
+    * server-client model
+    [HW: Will readers think this as a regression for version control techniques?
+    We may need to prove that access control is not possible in fully
+    distributed model.]
+    [HW: Perhaps when people need strong access control they do not need fully
+    distributed model. Because the most important benefit for distributed model
+    is that it allows the user to have multiple copies of a repository and work
+    on a local machine. However this is not safe if the owner of a repository
+    wants to set access restrictions.]
+    * repository and workdir
+
+- Mechanisms [This part talks about basic mechanisms of \sys.]
+    [HW: shall this be merged with the previous part?]
+    * partial checkout and partial commit
+        - access control list
+    * branch mode (a.k.a backtrace mode in some documentation)
+
+- Challenges. [This part talks about challenges of \sys.]
+    [For details see S3 in notes/outline-document.txt]
+    * tradeoff between version control and access control (S3.0 and S3.3)
+    * definition and achievement of rollback (S3.2)
+    * tradeoff between cost of record and the ability to rollback (S3.1)
+
+- Implementation [This part summarizes important implementation details.]
+    * FVM Daemon
+
+- Evaluation. [This part talks about evaluation results of \sys.]
+    [HW: Details TBD.]
+
+- Positioning
+    [HW: TBD]
+
+
+
+S2 Motivation
+TBD. S3 in "notes/design_v2.txt" has some documentation for it.
+
+S3 Data Model
+[HW: This and the next section talks about the design of \sys. This section
+talks about high level ideas, and the next section talks about details.]
+TBD
+
+S4 Design
+TBD
+
+S5 Implementation
+
+Talks about implementation details that the readers might be interested. TBD
+after S3 and S4. [HW: we may merge it with eval section.]
+
+S6 Evaluation
+[For details see eval-plan.txt]
+
+TBD
+
+S7 Related work
+[For details see related-notes.txt]
+
+TBD
+
+S8 Discussions
+TBD
+
+S9 Conclusion
+TBD
+

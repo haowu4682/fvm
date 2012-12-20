@@ -15,7 +15,10 @@ not solve?
 
 2. Performance experiments
 
-We compare the following aspects for \sys and regular revision control systems
+2.1 High Level Ideas
+
+We compare the following aspects for \sys and regular version control systems
+(VCS)
 (SVN, GIT, Mercurial, etc.):
 Time cost,
 Disc space cost,
@@ -33,6 +36,56 @@ To sum up, the experiment set is:
 
 In each experiment, we collect {time-cost, space-cost, cpu/memory-cost,
     network-cost}
+
+2.2 Single user scenario
+
+We firstly evaluate the performance when there is only 1 user using the
+systems. In this scenario, no network communication is required for all systems.
+So we will just evaluate the other aspects.
+
+#1 Time cost
+
+When a user uses a VCS, he first needs to perform an "initial checkout", and
+then performs regular checkout and commit. The "initial checkout" needs to
+checkout the whole directory tree while the operations afterwards only need to
+work on the differences. So the initial checkout should be slower than the other
+operations. We will evaluate them separately.
+
+For a repository with fixed size $s$, do the following for each VCS:
+
+(1) performs an initial checkout, record the time $t_1$
+(2) performs a normal checkout, record the time $t_2$
+(3) performs a normal commit, record the time $t_3$
+
+Plot $t_1$, $t_2$, and $t_3$ over $s$.
+
+
+
+#2 Space cost
+
+We continously add files into workdir, and make a commit after each file. Plot
+the repository size $r$ over the workdir size $w$.
+
+
+
+#3 CPU/Memory cost
+
+During the previous experiments, we also record the CPU and memory cost for the
+VCS program. We will display them in a table.
+
+
+
+2.3 Multiple user scenario
+
+In this scenario, we assume two users are using the same network file system.
+There is 1 server machine and 2 client machines. They all belong to the same
+data center.
+
+We will evaluate #1 - #3 again under this scenario. During each experiment we
+shall record the average RTT and jitter in the network.
+
+We shall also record the number of data transmitted through the network in each
+experiment.
 
 
 
