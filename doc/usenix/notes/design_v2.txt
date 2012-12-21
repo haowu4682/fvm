@@ -185,7 +185,7 @@ affecting all the other files.
 
 
 
-3. Motivation Samples
+3. Motivating Scenarios
 
 Unlike Git, Mercurial and other distributed revision control systems, FVM cannot
 run on the client side independently. Also there shall be a underlying shared

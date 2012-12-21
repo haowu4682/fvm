@@ -1,4 +1,13 @@
 [notes/design.txt and notes/design_v2.txt has some details.]
+[Section arrangement (vary during actual writing):
+S1 intro: 1.5 pages
+S2 motiviation: 1 page
+S3-S5 design: 5-6 pages
+S6 eval: 2-3 pages
+S7-S9 other stuff: 1-2 pages
+Reference 0.5 - 1 pages]
+
+
 
 S1 Intro
 [Refer to section 1 in notes/design_v2.txt.]
@@ -82,20 +91,90 @@ together.]
 
 
 S2 Motivation
-TBD. S3 in "notes/design_v2.txt" has some documentation for it.
 
-S3 Data Model
-[HW: This and the next section talks about the design of \sys. This section
-talks about high level ideas, and the next section talks about details.]
-TBD
+[Scenario cases are in S3 in notes/design_v2.txt]
 
-S4 Design
-TBD
+- An overview of the motivation
 
-S5 Implementation
+- Scenario #1: Case 1
+
+- Scenario #2: Case 2
+
+- Scenario #3: Case 4
+
+- Summarize the scenarios and conclude basic \sys principles.
+[Details TBD.]
+
+
+S3 Architecture
+[HW: S3 describes high level things, which occupies 1-2 pages. S4 describes the
+data model details which consists of 2-3 pages. S5 describes how \sys works
+using the data model, consists of 2-3 pages. Page estimate might change while
+actual writing.]
+[HW: Design principles shall be in S2.]
+[HW: I use the "architecture" way to talk about things here. Another way to
+divide the section is to use S3 as "user's view of \sys", which contains some of the
+content of S3.1, and merge the detail architecture with S4.]
+
+- Summary of the whole architecture
+    * Figure: notes/gv/server.dot.pdf (which needs some adjustment)
+    * Summarize client-server model
+    * Briefly state the functionality of each component in the architecture
+
+
+S3.1 Summary of FVM Client
+    * Describe what action a user could make. Write a table for all the actions.
+    * Describe the functionality for each important action which can not be
+      described completely in the table.
+    * Mention how each action is related to the FVM Daemon, if needed.
+    * Use samples if necessary.
+
+
+S3.2 Summary of FVM Daemon
+[HW: This subsection talks about the high level ideas. The details shall be
+included in S5.]
+    * Describe the purpose of FVM Daemon.
+    * Describe how FVM Daemon and server client model helps solving access
+      control problem.
+    * Describe the functionality of FVM Daemon. Use a table if necessary.
+
+
+
+S4 Data Model
+
+- Summary of top level data model
+    * Summarize repository and workdir relationship
+    * A sample showing the relation between repository and workdir:
+      notes/gv/partial.dot.pdf
+
+- Summary of repository structure
+    * Summarize the concept between commit, branch, tree and blob.
+      [Details in S4.1]
+
+
+S4.1 Git data model
+
+This subsection briefly introduces the git data model for those who are not
+familiar with it.
+
+
+S4.2 
+
+
+
+
+S5 Details of FVM Daemon
+
+- Summary of what FVM daemon does. [This might have been done somewhere in S3.]
+
+
+
+S6 Implementation
 
 Talks about implementation details that the readers might be interested. TBD
-after S3 and S4. [HW: we may merge it with eval section.]
+after S3 and S4.
+
+[More details TBD.]
 
 S6 Evaluation
 [For details see eval-plan.txt]
