@@ -37,6 +37,8 @@ To sum up, the experiment set is:
 In each experiment, we collect {time-cost, space-cost, cpu/memory-cost,
     network-cost}
 
+[MW: maybe call the above microbenchmarks?]
+
 2.2 Single user scenario
 
 We firstly evaluate the performance when there is only 1 user using the
@@ -59,21 +61,23 @@ For a repository with fixed size $s$, do the following for each VCS:
 
 Plot $t_1$, $t_2$, and $t_3$ over $s$.
 
-
+[MW: I think instead of "over" above, you mean "versus." This, by the
+way, is a good thing to analyze.]
 
 #2 Space cost
 
 We continously add files into workdir, and make a commit after each file. Plot
 the repository size $r$ over the workdir size $w$.
 
-
+[MW: good.]
 
 #3 CPU/Memory cost
 
 During the previous experiments, we also record the CPU and memory cost for the
 VCS program. We will display them in a table.
 
-
+[MW: suggest integrating #3 with #1. The time cost will be CPU cost +
+I/O latency, right?]
 
 2.3 Multiple user scenario
 
@@ -84,9 +88,12 @@ data center.
 We will evaluate #1 - #3 again under this scenario. During each experiment we
 shall record the average RTT and jitter in the network.
 
+[MW: why/how is average RTT and jitter relevant? Aren't those metrics
+evaluating somethign at a different (lower) level of abstraction, namely
+the network? Maybe I'm misunderstanding.]
+
 We shall also record the number of data transmitted through the network in each
 experiment.
 
-
-
-
+[MW: above is good, as it investigates network costs. You could call
+this "Network cost", I think.]
