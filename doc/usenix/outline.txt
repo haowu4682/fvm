@@ -8,6 +8,11 @@ S7-S9 other stuff: 1-2 pages
 Reference 0.5 - 1 pages]
 
 
+[MW: This content looks mostly right (though a bit too detailed in S1; I
+don't think everything that's proposed for S1 will fit in S1). I'd
+suggest now organizing the bullets in a proposed paragraph order.  What
+should the first paragraph say? What should the second paragraph say?
+Etc.]
 
 S1 Intro
 [Refer to section 1 in notes/design_v2.txt.]
@@ -23,6 +28,14 @@ together.]
     the problem which the paper addresses.]
     [HW: Question. Shall we mention that we want to perform version control on
     the whole file system or no?]
+    [MW: I think it might make sense to mention "the whole file system"
+     as an important use case.]
+
+    [MW: the above says "Problem." What exactly is the problem? I think
+    it might be better to call this "desired properties" or "desired
+    functions" or something like that. But this might be a bit too early
+    in the paper to be going into this much detail. What paragraph order
+    do you propose?]
 
     * version control (a.k.a revision control)
         + create checkpoints (a.k.a "commit" in git or "revision" in svn)
@@ -67,8 +80,13 @@ together.]
     wants to set access restrictions.]
     * repository and workdir
 
+    [MW: it's not obvious to me that the distributed model and access
+    control are in fundamental conflict. are you sure that they are?]
+
 - Mechanisms [This part talks about basic mechanisms of \sys.]
     [HW: shall this be merged with the previous part?]
+    [MW: probably should merge it, yes. In the intro, you want a maximum
+    of three paragraphs that cover the design.]
     * partial checkout and partial commit
         - access control list
     * branch mode (a.k.a backtrace mode in some documentation)
@@ -78,15 +96,23 @@ together.]
     * tradeoff between version control and access control (S3.0 and S3.3)
     * definition and achievement of rollback (S3.2)
     * tradeoff between cost of record and the ability to rollback (S3.1)
+    [MW: the flow is such that it might be awkward/unclear to end with
+    Challenges. You might be better off describing the challenges first
+    and then how you respond to them. This is the kind of thing that
+    requires a few revisions and iterations.]
 
 - Implementation [This part summarizes important implementation details.]
     * FVM Daemon
+    [MW: I don't think you need implementation details in the intro.]
 
 - Evaluation. [This part talks about evaluation results of \sys.]
     [HW: Details TBD.]
 
 - Positioning
     [HW: TBD]
+    [MW: Not sure what this means. The entire intro is supposed to have
+    done the positioning by the time the flow reaches the details of
+    challenges and evaluation.]
 
 
 
@@ -111,6 +137,8 @@ S3 Architecture
 data model details which consists of 2-3 pages. S5 describes how \sys works
 using the data model, consists of 2-3 pages. Page estimate might change while
 actual writing.]
+[MW: I don't think you'll need more than a column (max 3/4 page) to
+describe high-level things. 1.5 or 2 pages seems like too many.]
 [HW: Design principles shall be in S2.]
 [HW: I use the "architecture" way to talk about things here. Another way to
 divide the section is to use S3 as "user's view of \sys", which contains some of the
@@ -151,6 +179,8 @@ S4 Data Model
     * Summarize the concept between commit, branch, tree and blob.
       [Details in S4.1]
 
+    [MW: will this description sound like a recapitulation of git, or
+    not? ideally, there are new concepts in this description.]
 
 S4.1 Git data model
 
@@ -160,7 +190,7 @@ familiar with it.
 
 S4.2 
 
-
+    [MW: what goes here?]
 
 
 S5 Details of FVM Daemon
