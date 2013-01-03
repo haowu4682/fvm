@@ -1,12 +1,30 @@
 \section{Introduction}
 \label{s:intro}
 
+<<<<<<< HEAD
 \newcommand{\git} {Git}
 \newcommand{\nfs} {NFS}
 
-\hw{Limitations of previous systems.}
+Today, most popular \HP{Is there a better word here?} \emph{version control
+systems (VCS)}\HP{Explain what is an VCS? I think the reader should have the
+context.} make two implicit assumptions. First, a repository is considered to be
+an integrity, and a user either can access everything in the repository, or
+nothing at all. Second, the working directory of a user is a mirror to the
+repository: it loads a snapshot from the repository, and stores another snapshot
+into the repository after the user's modifications. \hw{How to explain this one?
+I want to say: the working directory contains the whole directory tree instead
+of a subset of it.}
 
-\hw{Motivation Samples.}
+These assumptions limit the functionality an VCS could provide.
+One problem is that an VCS under these assumptions can not allow a user to
+visit only a \emph{subset} of a repository. Section \ref{s:motivation} describes
+more scenarios for the problems.\HP{Shall we mention detailed examples here? If we
+mention a detail scenario, it may be redundant since we already have section
+\ref{s:motivation} to talk about motivation scenarios. But if we do not mention
+a detail scenario, readers might not be easy to see the problems.}
+
+\hw{TODO: Explain git\cite{git} as an example, if we do not mention detail
+scenario above.}
 
 \hw{Is the length of following 3 paragraphs appropriate?}
 We present the design, implementation and evaluation of \sys, a version control
@@ -40,7 +58,7 @@ challenges shall be included?}
 
 In our experiments, \hw{Fill in summary of evaluation.}
 
-\hw{List of contributions.}
+\hw{TODO List of contributions.}
 
 The rest of the paper is organized as follows. \hw{Introduce the following
 sections.}

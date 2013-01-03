@@ -197,14 +197,35 @@ This subsection briefly introduces the git data model for those who are not
 familiar with it.
 
 
-S4.2 
+S4.2 Access control model
 
-    [MW: what goes here?]
+This subsection describes what data structure we use for handling access control
+
+
+S4.3 Other stuff
+
+TBD
+
 
 
 S5 Details of FVM Daemon
 
 - Summary of what FVM daemon does. [This might have been done somewhere in S3.]
+
+
+S5.1 Partial Checkout
+
+- Explain the details for partial checkout
+
+
+S5.2 Partial Commit
+
+- Explain the details for partial commit
+
+
+S5.3 Other stuff
+
+TBD
 
 
 

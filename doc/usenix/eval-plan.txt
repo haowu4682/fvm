@@ -59,7 +59,7 @@ For a repository with fixed size $s$, do the following for each VCS:
 (2) performs a normal checkout, record the time $t_2$
 (3) performs a normal commit, record the time $t_3$
 
-Plot $t_1$, $t_2$, and $t_3$ over $s$.
+Plot $t_1$, $t_2$, and $t_3$ v.s $s$.
 
 [MW: I think instead of "over" above, you mean "versus." This, by the
 way, is a good thing to analyze.]
@@ -86,14 +86,13 @@ There is 1 server machine and 2 client machines. They all belong to the same
 data center.
 
 We will evaluate #1 - #3 again under this scenario. During each experiment we
-shall record the average RTT and jitter in the network.
+shall record the latency and network cost for the scenario.
 
 [MW: why/how is average RTT and jitter relevant? Aren't those metrics
 evaluating somethign at a different (lower) level of abstraction, namely
 the network? Maybe I'm misunderstanding.]
 
-We shall also record the number of data transmitted through the network in each
-experiment.
-
 [MW: above is good, as it investigates network costs. You could call
 this "Network cost", I think.]
+[HW: updated.]
+
