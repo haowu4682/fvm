@@ -59,11 +59,13 @@ together.]
     explains how popular version control could not solve those problems.]
     * Case 1: Case 1 in S3 of notes/design_v2.txt
     * Case 2: Case 4 in S3 of notes/design_v2.txt
-    [HW: Case 2 may be omitted.]
+    [HW: Case 2 will be omitted. We will only briefly introduce case 1.]
 
 - Old version control systems. [a.k.a Related works. This part explains why
     popular version control systems cannot solve the problems above. ]
     [See related-notes.txt]
+    [HW: Will the user be confused if we do not mention this one? If not I will
+    omit it.]
     * CVS and SVN
     * Git and Mercurial
     * Vesta
@@ -79,9 +81,11 @@ together.]
     on a local machine. However this is not safe if the owner of a repository
     wants to set access restrictions.]
     * repository and workdir
+    [HW: Combine this one with "partial" things in next part.
 
     [MW: it's not obvious to me that the distributed model and access
     control are in fundamental conflict. are you sure that they are?]
+    [HW: I think they are not in conflict. See notes/distributed-model.txt]
 
 - Mechanisms [This part talks about basic mechanisms of \sys.]
     [HW: shall this be merged with the previous part?]
@@ -100,20 +104,25 @@ together.]
     Challenges. You might be better off describing the challenges first
     and then how you respond to them. This is the kind of thing that
     requires a few revisions and iterations.]
+    [HW: I agree.]
 
 - Implementation [This part summarizes important implementation details.]
     * FVM Daemon
     [MW: I don't think you need implementation details in the intro.]
+    [HW: I agree.]
 
 - Evaluation. [This part talks about evaluation results of \sys.]
     [HW: Details TBD.]
 
-- Positioning
+- Contributions
     [HW: TBD]
     [MW: Not sure what this means. The entire intro is supposed to have
     done the positioning by the time the flow reaches the details of
     challenges and evaluation.]
+    [HW: I rename the tile to "contributions", which talks about the basic
+    contributions of the paper.]
 
+- Introduction of the organization of the paper
 
 
 S2 Motivation

@@ -1,15 +1,47 @@
 \section{Introduction}
 \label{s:intro}
 
-\hw{TODO: Motivation.}
+\newcommand{\git} {Git}
+\newcommand{\nfs} {NFS}
 
-\hw{TODO: Historical Systems.}
+\hw{Limitations of previous systems.}
 
-\hw{TODO: \sys introduction.}
+\hw{Motivation Samples.}
 
-\hw{TODO: Challenges}
+\hw{Is the length of following 3 paragraphs appropriate?}
+We present the design, implementation and evaluation of \sys, a version control
+system which solves the issues we mentioned previously. As depicted in Figure
+\hw{Fill in the figure, use notes/gv/server.dot.pdf as a start.}, \sys basically
+uses a server-client model. The server stores the repository which multiple
+users share, and is trusted\HP{any better word?} for accessing and modifying anything in the
+repository. The client is the machine which a user works on, and has only
+limited permissions to access and modify the repository. \sys assumes that the
+server and client share their file systems using a distributed file system, like
+\nfs. % This assumption's purpose is to reduce network cost for transmitting files.
+When the client wants to perform any action with the repository, it sends the
+request to the server, and the server will perform the action with the data in
+the shared file system. \hw{Readers might wonder why we do not use a
+fully distributed model. We may need to explain it somewhere.}
 
-\hw{TODO: Evaluation}
+In order for the user to checkout and commit to the repository while only
+accessible to a subset of the repository, \sys has a mechanism called partial
+checkout and partial commit. The user could only checkout a subset of files in
+the repository, and commit only those files back to the repository when the user
+has modified it.
 
-\hw{TODO: Summary}
+\sys uses \git as its background object storage. However, in order to record the
+access control information, we modify the data model a little bit, and add an
+access control list into each commit. The server is responsible to check the
+access control list each time it performs an action to make sure that the user
+has the ability to perform the action.
+
+During the design and implementation, \sys faces several challenges. \hw{What
+challenges shall be included?}
+
+In our experiments, \hw{Fill in summary of evaluation.}
+
+\hw{List of contributions.}
+
+The rest of the paper is organized as follows. \hw{Introduce the following
+sections.}
 
