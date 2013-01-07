@@ -143,6 +143,8 @@ S2 Motivation
 [Details TBD.]
 
 
+[HW: I decide to take alternative way in the last comment below. See the text
+directly. The outline for S3-S5 is obsoleted.]
 S3 Architecture
 [HW: S3 describes high level things, which occupies 1-2 pages. S4 describes the
 data model details which consists of 2-3 pages. S5 describes how \sys works
