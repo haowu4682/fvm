@@ -100,6 +100,8 @@ together.]
     * tradeoff between version control and access control (S3.0 and S3.3)
     * definition and achievement of rollback (S3.2)
     * tradeoff between cost of record and the ability to rollback (S3.1)
+    * the ability to allow differnt users to modify concurrently without
+      affecting each other.
     [MW: the flow is such that it might be awkward/unclear to end with
     Challenges. You might be better off describing the challenges first
     and then how you respond to them. This is the kind of thing that

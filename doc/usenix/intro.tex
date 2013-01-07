@@ -22,6 +22,8 @@ a detail scenario, readers might not be easy to see the problems.}
 \hw{TODO: Explain git\cite{git} as an example, if we do not mention detail
 scenario above.}
 
+\hw{Shall we introduce some traditional VCS here?}
+
 \hw{Is the length of following 3 paragraphs appropriate?}
 We present the design, implementation and evaluation of \sys, a version control
 system which solves the issues we mentioned previously. As depicted in Figure
@@ -49,10 +51,37 @@ access control list into each commit. The server is responsible to check the
 access control list each time it performs an action to make sure that the user
 has the ability to perform the action.
 
-During the design and implementation, \sys faces several challenges. \hw{TODO:
-Mention challenges here.}
+\hw{We need to mention branch mode, but it exceeds the limitation of 3
+paragraphs. What shall we do here?}
 
-\hw{TODO Mention the response for the challenges.}
+A user could use branch mode in \sys similar to popular version control systems.
+Unlike normal VCS, a user could specify a subset of files to be commited into a
+specified branch. In this way, a user can work with different files in different
+branch without duplicating a work directory. \hw{Motivation Case \#4 is an
+application of this.}
+
+\hw{Mike, the text flow looks weird here. Do you have suggestions to make it
+fluent here?}
+
+During the design and implementation, \sys faces several challenges. First of
+all, \sys has to perform access control without affecting version control.
+Secondly, \sys has to allow a user to rollback without affecting the mainstream
+of a repository. Finally, \hw{the ability to allow different users to modify
+concurrently without affecting each other.}
+
+For the first challenge, \sys put all version control actions on the server
+side. The server side runs a daemon program which checks access abilities before
+doing any actual action. The daemon will hide information that the user should
+not read and ignore changes that the user could not writeabilities before doing
+any actual action. The daemon will hide information that the user should not
+read and ignore changes that the user could not write.
+
+For the second challenge, \sys forces the user to use branch mode when the user
+checkout a retro commit.\HP{Similar to "detached HEAD" in git} User modification
+will not be merged with mainstream\HP{master branch} unless the user explicitly
+specified it.
+
+\hw{TODO Response the 3rd challenge.}
 
 In our experiments, \hw{Fill in summary of evaluation.}
 
