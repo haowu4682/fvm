@@ -5,10 +5,11 @@
 
 Figure \ref{f:arch-abstract} \hw{TODO graph} shows the architecture of \sys.
 \hw{Describe each part in \sys.}
+%\hw{One small paragraph to remind the user that we use \git data model basics.}
 
 \subsection{Data Model}
 
-\hw{copied from design\_v2.txt}
+%\hw{copied from design\_v2.txt}
 As said before, \sys separates the \emph{repository} and the \emph{working
 directory} (\emph{workdir}). A repository is a database which stores files
 and directories of a file system. The repository is stored on the server
@@ -17,15 +18,28 @@ contain a subset of files from a repository, and allows the user to view and
 modify. (A user cannot view and modify files from a repository directly.) The
 workdir belongs to the client machine.
 
-\hw{One small paragraph to remind the user that we use \git data model basics.}
-\hw{Include a figure showing the relation between repository and workdir:
+\hw{TODO Briefly introduce commit, tree and blob.}
+
+\hw{TODO Include a figure showing the relation between repository and workdir:
 notes/gv/partial.dot.pdf.}
+
+% Partial checkout/commit stuff
+Figure \ref{f:partial-data-model} shows the relation between the workdir and the
+corresponding commit in the repository. \hw{TODO: explain the figure.}
 
 \subsection{Access Control Model}
 
-\hw{Describe access control list.}
-\hw{Describe the access control information for each file.}
-\hw{Describe how access control model affects version control actions.}
+The motivation scenarios suggest that \sys should have an access control method
+throughout both the time and the space. \hw{Check with section 2.}
+Therefore, \sys uses a two dimensional \HP{Any good word here?} way to record
+access control information. One dimension is the access permissions in each
+file, the other dimension is an access control list in each commit.
+
+The access permissions\HP{Is this phrase good?} in each file is \unix-like.
+\hw{TODO Describe the access control information for each file.}
+
+\hw{TODO Describe access control list.}
+\hw{TODO Describe how access control model affects version control actions.}
 
 \subsection{Branch Mode Model}
 
