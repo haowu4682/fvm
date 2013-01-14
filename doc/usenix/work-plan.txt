@@ -17,29 +17,28 @@ takes 2 days.
 (1) Introduction.
     TODO items:
     - motivation samples (done)
-    - intro outline (first version)
-    - intro text
+    - intro outline (done)
+    - intro text (first version)
 
 (2) Motivation sections. Work start after introduction part.
     TODO items:
-    - outline
+    - outline (done)
     - text
 
 (2) Design sections. Work start after the written of introduction part.
     TODO items:
-    - outline
-    - text
+    - outline (done)
+    - text (first version)
 
 (3) Related works, discussions and others.
     TODO items:
     - outline
     - text
 
-We shall have the first draft for paper (except for evaluation part)
-due Jan 11. For evaluation part see "eval-plan.txt".
-
 (4) Evaluation. Work will start after the introduction part.
     TODO item:
     - plan (high level idea)
     - execution (Tracked in eval-plan.txt)
+
+For evaluation part see eval-plan.txt
 

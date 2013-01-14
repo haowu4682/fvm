@@ -1,0 +1,41 @@
+\begin{figure}[htb]
+%\goodcitationsize
+\small
+\rule{\linewidth}{.08em}
+
+\begin{tabbing}
+xx\=xx\=xx\=xx\=\kill
+
+{\bf function} \va{checkout}(\va{commit\_id}, \va{relative\_path},
+\va{destination\_path}, \\
+\>\>\> \va{access\_control\_list}, \va{repo}) \\
+\> root\_tree = \va{get\_commit\_tree}(\va{commit\_id}, \va{relative\_path},
+\va{repo}) \\
+\> \va{write\_object}(\va{root\_tree}, \va{destination\_path},
+\va{access\_control\_list}, \va{repo}) \\ [2mm]
+
+{\bf function} \va{get\_commit\_tree} (\va{commit\_id}, \va{path}, \va{repo}) \\
+\> commit = \va{get\_commit}(\va{repo}, \va{commit\_id}) \\
+\> root\_tree = \va{get\_commit\_tree}(commit) \\
+\> path\_list = \va{split}(path) \\ % HW: Explain what "split" means.
+\> {\bf for} entry {\bf in} path\_list \\
+\>\> root\_tree = \va{get\_subtree}(root\_tree, entry) \\ [2mm]
+
+// TODO more code from notes/pcode.txt
+
+\end{tabbing}
+
+\rule{\linewidth}{.08em}
+\caption{Pseudocode for partial checkout and commit.}
+\label{f:pcode-checkout}
+\end{figure}
+
+\endinput
+
+% Obsoleted representation
+\begin{algorithmic}
+    \Function{checkout}{$\mathit{commit\_id}, \mathit{relative\_root\_path},
+        \mathit{destination\_path}, \mathit{access\_control\_list}, \mathit{repo}$}
+    \EndFunction
+\end{algorithmic}
+

@@ -1,0 +1,82 @@
+
+##### Common Functions #####
+# Ignore pcode for this for now. Use text description instead in the paper.
+def has_permission:
+    # TBD
+
+##### Partial Checkout #####
+# HW: When saying "make a file/blob/dir/tree/etc.", it implicitly includes the
+# access info
+def checkout(commit_id, relative_root_path, work_dir,
+        access_control_list, repo):
+    commit = get_commit(repo, commit_id)
+    root_tree = get_commit_tree(commit)
+    path_list = split(path) # split("/doc/usenix/notes" =  ["doc", "usenix",
+            # "notes"]
+    for entry in path_list:
+        root_tree = get_subtree(root_tree, entry)
+    write_object(root_tree, work_dir, access_control_list, repo)
+
+
+def write_object(root_object, destination, access_control_list, repo):
+    if has_permission(root_object, access_control_list, READ) is false:
+        return
+
+    if (root_object is a blob)
+        access_info = retrieve_access_info(root_object)
+        write_to_file(root_object, access_info, destination)
+
+    else if (root_object is a tree)
+        access_info = retrieve_access_info(root_object)
+        mkdir(destination, access_info)
+        for entry in root_object as tree:
+            child_destination = destination + '/' + entry_name
+            write_object(entry_object, child_destination, access_control_list,
+                repo)
+
+    else:
+        # This should not happen. Currently \sys only supports normal files and
+        # directories.
+
+##### Partial Commit #####
+def commit(parent_commit_id, relative_root_path, work_dir, access_control_list,
+        repo):
+    commit = get_commit(repo, parent_commit_id)
+    old_root_tree = get_commit_tree(commit)
+    old_partial_tree = old_root_tree
+    path_list = split(path) # split("/doc/usenix/notes" =  ["doc", "usenix",
+            # "notes"]
+    for entry in path_list:
+        old_partial_tree = get_subtree(old_partial_tree, entry)
+    new_parital_object = create_partial_object(relative_root_path, work_dir, access_control_list, repo)
+    new_root_tree = combine_tree(old_root_tree, new_partial_tree, relative_root_path)
+    create a commit object using new_root_tree
+
+def create_partial_object(path, work_dir, access_control_list, repo)
+    if has_permission(path, access_control_list, WRITE) is false:
+        return the corresponding file in old_commit # We omit the details here.
+
+    if path is a regular file (or symbolic link):
+        create a blob for the path
+        return the blob
+    else if path is a directory
+        create a tree for the path
+        for each file under the path:
+            create_partial_object(path+'/'+file, work_dir+'/'+file
+                access_control_list, repo)
+            add the object to the tree
+        return the tree
+    else
+        # We do not support other kind of files for now
+
+#HW: Is this one easy enough to understand? I'll provide more details if not.
+def combine_tree(old_root_tree, new_partial_tree, relative_path):
+    find the relative_tree for old_root_tree at relative_path
+    while relative_tree is not old_root_tree:
+        replace the old partial tree with new_partial_tree
+        relative_tree = the parent of relative_tree
+
+
+######## Ignored content after this line ########
+# filter is a function. filter(relative_path) indicate whether a path should be
+# included in the commit

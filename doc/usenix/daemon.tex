@@ -9,9 +9,16 @@
 
 \subsection{Partial checkout}
 
-\hw{Describe how the daemon performs partial checkout}
+\include{fig-pcode-checkout}
+
+Figure \ref{f:pcode-checkout} depicts the pseudo code for partial checkout.
+Basically the process has two steps: the first step is to search for a user
+specified relative path, and the second step is to retrieve files starting from
+that point. \hw{The reason to divide the process into two steps is to save the
+cost to traverse the files the user is not intereseted in.}
 
 \subsection{Partial commit}
 
-\hw{Describe how the daemon performs partial commit}
+\hw{This subsection is similar to the previous one since the mechanisms are
+similar, we will write it later.}
 

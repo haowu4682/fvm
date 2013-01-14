@@ -1,0 +1,24 @@
+1. Overview
+
+In a distributed version control system, each user has a sperated (cloned) copy
+of the repository. They perform ordinary version commands (commit, checkout,
+etc.) on their own copies. Every user could work independently, and they can
+communicate with each other. Popular distributed version control systems include
+git and mercurial. [HW: Citation needed.]
+
+2. Conflict with Access Control
+
+Distributed model is not fundementally in conflict with access control, but it
+makes it difficult. The reason is that a user can not simply "clone" a
+repository while a user wants to share a repository. If a user simply clones a
+repository, the user will be able to read every file in the repository,
+including those files the user does not have "read" permissions.
+
+In order to enforce access control mechanism in distributed model, we need to
+carefully design a protocol to avoid the issue. Basically we need a way to
+"partial clone" only the files that the user can access, and methods to "add" or
+"remove" information when the access control list changes. We need a lot of
+lower level modifications to git (about storage system and other things) to git.
+So this will be future work and we will not include it now.
+
+

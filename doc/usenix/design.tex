@@ -18,7 +18,7 @@ contain a subset of files from a repository, and allows the user to view and
 modify. (A user cannot view and modify files from a repository directly.) The
 workdir belongs to the client machine.
 
-\hw{TODO Briefly introduce commit, tree and blob.}
+\hw{Consider briefly introducing commit, tree and blob here.}
 
 \hw{TODO Include a figure showing the relation between repository and workdir:
 notes/gv/partial.dot.pdf.}
@@ -26,6 +26,29 @@ notes/gv/partial.dot.pdf.}
 % Partial checkout/commit stuff
 Figure \ref{f:partial-data-model} shows the relation between the workdir and the
 corresponding commit in the repository. \hw{TODO: explain the figure.}
+
+\subsection{Server Client Model}
+\hw{Consider combine this with the previous subsection.}
+
+It is much easier to solve the access control problem for version control in a
+server client model than in a fully distributed model.\HP{Talk about this in
+the discussion session or an appendix. See notes/distributed-model.txt for some
+discussions.} \hw{Summarize brief reasons here.}
+
+Basically, a server serves as the role of an administrator. The server side
+program of \sys (a.k.a \Sys Daemon) has the permission to access any files in a
+repository stored on the server. The client side program, on the other hand, can
+only access the files that the user has permissions to access. \HP{Remind the
+readers to see the next subsection for more details.} The access control is
+guaranteed by \sys, which will be described in the next subsection.
+
+When the user wants to access a subset of files via \sys client, the client
+sends a request to the \Sys Daemon, and the \Sys Daemon will perform a related
+action. If the client needs to "checkout" a subset of files, \Sys Daemon will
+perform a partial checkout action; if the client needs to "commit" a subset of
+files, \Sys Daemon will perform a partial commit action. The details of the
+actions \Sys Daemon could perform is in Section \ref{s:daemon}.
+
 
 \subsection{Access Control Model}
 
@@ -35,11 +58,47 @@ Therefore, \sys uses a two dimensional \HP{Any good word here?} way to record
 access control information. One dimension is the access permissions in each
 file, the other dimension is an access control list in each commit.
 
-The access permissions\HP{Is this phrase good?} in each file is \unix-like.
-\hw{TODO Describe the access control information for each file.}
+The access info\HP{Is this phrase good?} in each file is \unix-like.
+Figure 3-a \hw{TODO draw the graph} shows a sample of the access permission
+information of several files in a directory. Figure 3-b\hw{TODO draw the graph}
+shows how the access
+permission information is stored in the backend git database.
 
-\hw{TODO Describe access control list.}
-\hw{TODO Describe how access control model affects version control actions.}
+The access info is the typical mechanism for access control in systems
+without version control. However, as motivation case \textred{XXX} suggests\HP{
+shall we put an example here?}, access control should be not only
+throughout\HP{good word?} the space, but also throughout the time. Since the
+commit history represents the time span in a version control system, \sys
+records an access control list in each commit, which controls access permissions
+throughout the time.
+
+\input{fig-access-list}
+
+Figure \ref{f:access-list} shows the content of an access control
+list sample. The access control list contains the "group status" at the commit
+point. The group status contains the list of users that belong to the group.
+
+In each checkout or commit action, \Sys Daemon calls the access control part to
+checkout whether a file is allowed to be accessed by the user. Figure
+\textred{XXX} shows the pseudo code of it.\HP{Do we need pseudo code here?}
+For each file, \sys retrieves the access info of the file, and the access
+control list info from the commit. It checks the permission in the following
+ways:
+
+(1) If the user is the owner of the file, check if the file's "user read" or
+"user write" bit is set.
+
+(2) If the user is not the owner of the file, and it belongs to the group of the
+file in the access control list, check if the file's "group read" or "group
+write" bit is set.
+
+(3) If the previous two conditions are not met, check if the file's "global
+read" or "global write" bit is set.
+
+The process then returns whether the user has the permission to access the file,
+correspondingly.
+
+\hw{TODO Describe how it solves motivation case \#1}
 
 \subsection{Branch Mode Model}
 
@@ -47,7 +106,8 @@ The access permissions\HP{Is this phrase good?} in each file is \unix-like.
 \hw{Describe how files in branch mode are mapped in the repository.}
 \hw{Describe how to enter/exit branch mode.}
 
-\subsection{Trace Level and Automatical Commit}
-\hw{Mention trace level and automatical commit stuff. This subsection should be
-relatively short.}
+
+\subsection{Trace Level and Automatic Commit}
+\hw{Mention trace level and automatic commit stuff if we have space. This
+subsection should be relatively short. This is unimportant.}
 
