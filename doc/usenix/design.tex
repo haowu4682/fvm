@@ -62,7 +62,7 @@ The access info\HP{Is this phrase good?} in each file is \unix-like.
 Figure 3-a \hw{TODO draw the graph} shows a sample of the access permission
 information of several files in a directory. Figure 3-b\hw{TODO draw the graph}
 shows how the access
-permission information is stored in the backend git database.
+permission information is stored in the backend \git database.
 
 The access info is the typical mechanism for access control in systems
 without version control. However, as motivation case \textred{XXX} suggests\HP{
@@ -102,9 +102,64 @@ correspondingly.
 
 \subsection{Branch Mode Model}
 
-\hw{Describe the branch mode basics.}
-\hw{Describe how files in branch mode are mapped in the repository.}
-\hw{Describe how to enter/exit branch mode.}
+Branch mode provides a similar functionality to two basic VCS functionalities:
+
+(1) Branch mode can perform a checkout on an old commit in the history.
+
+(2) As the name tells, branch mode can be used to create a branch.
+
+However, branch mode in \sys also has several differences from regular VCSs.
+\hw{Describe differences, or remove the sentence.}
+
+The command format for entering branch mode is \textit{backtrace-start relative\_path
+branch commit\_id}. The command does the following two things.
+
+(1) Performs a partial checkout for relative\_path and commit\_id.
+
+(2) In the future, when FVM needs to make a commit, it makes a partial
+commit for relative\_path to branch, and makes a partial commit for files
+not in relative\_path to "master" branch. Figure \ref{f:branch-mode} shows how
+it works.
+
+The command format for exiting branch mode is \textit{backtrace-stop branch
+option}. The option indicates the destiny of the branch. If the option is
+"abandon", the branch will hide into the history without affecting the
+mainstream\HP{or "master" branch}. If the option is "overwrite", the most recent
+commit (a.k.a head) in the mainstream will be replaced by the head of the
+branch. If the option is "merge", \sys will try to merge the head of the branch
+with the head of the mainstream, and the user may need to deal with the
+conflicts manually, just as \git does.
+
+An interesting point here is that a conflict only happens when multiple users
+are working on the same directory. In other words, no conflicts will happen if a
+user is the only one working in the repository. In fact, the option "merge" and
+"overwrite" has the same effect in single user mode. The reason is that when a
+file in a workdir is marked as in branch mode, all further updates of the file
+will be commited into the specified branch, which results in that the mainstream
+does not have any update of the file during the branch mode period. As a result,
+during the merge process, \sys will only take the most recent update of those
+files, which are in the specified branch.
+
+\hw{The following several paragraphs needs some work.}
+The reason we combine the two things together is that we do not want the
+user to enter a "detached head" mode like in \git\cite{git}.\HP{precise
+citation needed.} There are two reasons we do not want to do that: First, it is
+difficult to manage a subset of files (or a commit) without giving it a branch
+name. Second, since the user does not explicitly operate on each branch (we will
+see it in the future), the user will lose track of the files if they do not
+belong to any branch.
+
+The most important usage for branch mode is to hide changes. When a user
+uses branch mode, the changes of files in relative\_path go to a specified
+branch, which is not explicitly visible by other users. Only the user's local
+machine explicitly sees those changes, until the user merge the branch to
+"master" branch. So branch mode could also be called "local mode".
+
+Another usage for branch mode is to separate files. For example, a user can
+let his OS configuration files to be always in branch mode. When the OS
+configuration is corrupted due to mal-function, a inconsistent update or virus,
+the user can checkout previous commit for the OS configuration files without
+affecting all the other files.
 
 
 \subsection{Trace Level and Automatic Commit}

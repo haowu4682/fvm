@@ -1,11 +1,22 @@
 \section{Details of \Sys Daemon}
 \label{s:daemon}
 
-\hw{Some overview stuff}
+This section will talk about some details of the \sys daemon. \Sys daemon is the
+core component of \sys. Figure \ref{f:command-daemon}\hw{TODO write a table} depicts all the commands
+that a \sys daemon could execute. Most commands of \sys are just a trivial call
+of the underlying \git database. The partial checkout and partial commit are the
+most important commands of \sys daemon.
 
 \subsection{Protocol}
+\HP{Consider merge this subsection with the overview.}
 
-\hw{Introduce the protocol between server(daemon) and client}
+As previously said\HP{Check section 1 and 3 for whether this has been said.},
+the client and server only talk on the control level. The data level is
+transmitted using an underlying distributed file system. This design reduces the
+complexity of \sys from trying to design a communication protocol for the data.
+There are also deficiencies for the design. \hw{TODO talk about deficiencies.}
+
+\hw{What else can we say here?}
 
 \subsection{Partial checkout}
 
