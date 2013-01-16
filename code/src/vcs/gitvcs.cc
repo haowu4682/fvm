@@ -177,46 +177,56 @@ enum FileOperation {
 // Whether a user has permission to access a file
 bool HasPermission(const String& username,
         FileOperation op,
-        const GitTreeEntryName& entry_name,
+        const String& owner,
+        const String& group,
+        mode_t mode,
         const AccessList& access_list)
 {
     assert(op == kRead || op == kWrite);
 
-    if (entry_name.name == username) {
+    if (owner == username) {
         if (op == kRead) {
-            if (entry_name.mode && S_IRUSR) {
+            if (mode && S_IRUSR) {
                 return true;
             }
         } else {
-            if (entry_name.mode && S_IWUSR) {
+            if (mode && S_IWUSR) {
                 return true;
             }
         }
     }
 
-    if (access_list.IsIncluded(username, entry_name.group)) {
+    if (access_list.IsIncluded(username, group)) {
         if (op == kRead) {
-            if (entry_name.mode && S_IRGRP) {
+            if (mode && S_IRGRP) {
                 return true;
             }
         } else {
-            if (entry_name.mode && S_IWGRP) {
+            if (mode && S_IWGRP) {
                 return true;
             }
         }
     }
 
     if (op == kRead) {
-        if (entry_name.mode && S_IROTH) {
+        if (mode && S_IROTH) {
             return true;
         }
     } else {
-        if (entry_name.mode && S_IWOTH) {
+        if (mode && S_IWOTH) {
             return true;
         }
     }
 
     return false;
+}
+
+bool HasPermission(const String& username,
+        FileOperation op,
+        const GitTreeEntryName& entry_name,
+        const AccessList& access_list)
+{
+    return HasPermission(username, op, entry_name.user, entry_name.group, entry_name.mode, access_list);
 }
 
 
@@ -700,12 +710,16 @@ int CombineObject(git_tree **new_root_tree,
     return 0;
 }
 
+void UpdateAccessList(AccessList& list, GitTreeEntryName& entry_name)
+{
+    list.AddUser(entry_name.user, entry_name.group);
+}
+
 // Create an object for the specific file in the path, recursively.
 // Return: 0 Object created normally.
 //         1 Object not created because it is not included, or not with the name
-//           of the branch.
+//           of the branch, or has no permission.
 //         <0 Error code.
-// TODO implement access list usage
 int CreateObjectRecursive(
         // Output
         git_oid *source_oid,
@@ -714,10 +728,12 @@ int CreateObjectRecursive(
 
         // Input
         git_repository *repo,
+        const String& username,
         const String& branch_name,
         const String& source_path,
         const String& relative_path,
         const git_oid *old_object_oid,
+        //GitTreeEntryName *old_tree_entry_name,
         AccessList *old_access_list,
 
         // Operator
@@ -729,6 +745,8 @@ int CreateObjectRecursive(
     git_oid child_oid;
     struct stat source_stat_buf;
     String source_branch_name;
+
+    git_blob *old_blob;
     git_tree *old_tree;
     const git_oid *old_child_oid;
 
@@ -744,7 +762,8 @@ int CreateObjectRecursive(
     stat(source_path.c_str(), source_stat);
 
     if (S_ISREG(source_stat->st_mode)) {
-        // TODO Check access list
+
+        // Check branch
         if (!IsIncluded(relative_path) || source_branch_name != branch_name) {
             if (old_object_oid != NULL) {
                 git_oid_cpy(source_oid, old_object_oid);
@@ -753,6 +772,20 @@ int CreateObjectRecursive(
             return 1;
         }
 
+#if 0
+        // Check access list
+        if (old_object_oid != NULL && old_tree_entry_name != NULL) {
+            //rc = git_blob_lookup(&old_blob, repo, old_object_id);
+            //if (rc == 0) {
+            //}
+            //
+
+            if (!HasPermission(username, kWrite, *old_tree_entry_name, *old_access_list)) {
+                git_oid_cpy(source_oid, old_object_oid);
+                return 0;
+            }
+        }
+#endif
 
         // Create a blob for the file
         rc = git_blob_create_fromdisk(source_oid, repo, source_path.c_str());
@@ -818,6 +851,14 @@ int CreateObjectRecursive(
 
                 if (old_tree_entry != NULL) {
                     old_child_oid = git_tree_entry_id(old_tree_entry);
+                    // Check access list
+                    GitTreeEntryName old_tree_entry_name(git_tree_entry_name(old_tree_entry));
+                    if (!HasPermission(username, kWrite, old_tree_entry_name, *old_access_list)) {
+                        // XXX ad-hoc fix
+                        rc = 0;
+                        git_oid_cpy(&child_oid, old_child_oid);
+                        return 0;
+                    }
                 } else {
                     old_child_oid = NULL;
                 }
@@ -828,7 +869,7 @@ int CreateObjectRecursive(
 
             // Recursively call the function to create an object for the child
             rc = CreateObjectRecursive(&child_oid, &child_stat, new_access_list,
-                    repo, branch_name, child_absolute_path.c_str(),
+                    repo, username, branch_name, child_absolute_path.c_str(),
                     child_relative_path.c_str(), old_child_oid, old_access_list,
                     IsIncluded, GetBranch);
             if (rc < 0) {
@@ -836,6 +877,7 @@ int CreateObjectRecursive(
                 return rc;
             }
 
+created:
             if (rc == 0) {
                 // If the child is created, we shall include it into the tree
                 // builder
@@ -848,6 +890,9 @@ int CreateObjectRecursive(
                     DBG("tree entry name: %s", tree_entry_name_str.c_str());
                     return -1;
                 }
+
+                // Update new access list
+                UpdateAccessList(*new_access_list, tree_entry_name);
             } else if (rc == 1) {
                 LOG("Inexisted path:%s", child_relative_path.c_str());
             } else {
@@ -1145,8 +1190,8 @@ int GitVCS::PartialCommit(const String& repo_pathname,
 
     // Step 5: Create partial trees
     // TODO Fix old commit tree problem
-    rc = CreateObjectRecursive(&partial_oid, NULL, &old_access_list, repo,
-            branch_name, work_dir, relative_path, old_commit_tree_id,
+    rc = CreateObjectRecursive(&partial_oid, NULL, &old_access_list, repo, username_,
+            branch_name, work_dir, relative_path, old_commit_tree_id,// NULL,
             &new_access_list, IsIncluded, GetBranch);
     if (rc < 0) {
         LOG("Failed to create the partial tree!");
