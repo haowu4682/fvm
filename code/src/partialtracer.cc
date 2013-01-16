@@ -87,7 +87,8 @@ int PartialTracer::Checkout(const String& branch_name)
         LOG("Cannot establish connection to the server.");
         return 0;
     }
-    rc = client_->Checkout(repo_path_, relative_path_, link_dst_, head_id);
+
+    rc = client_->Checkout(repo_path_, relative_path_, link_dst_, head_id, config_);
     if (rc < 0) {
         LOG("Cannot checkout the specified repository.");
         return 0;

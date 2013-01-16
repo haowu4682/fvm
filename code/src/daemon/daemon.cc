@@ -103,17 +103,17 @@ void ResponseForClient(int client_sockfd)
 
     // Execute the command according to the command string
     if (command_args[0] == "CHECKOUT") {
-        // Format: CHECKOUT repo commit_id relative_path destination_path
-        if (command_args.size() < 5) {
+        // Format: CHECKOUT repo commit_id relative_path destination_path username
+        if (command_args.size() < 6) {
             LOG("Format error for CHECKOUT command.");
         } else {
             vcs->Checkout(command_args[1], command_args[2], command_args[3],
-                    command_args[4]);
+                    command_args[4], command_args[5]);
         }
     } else if (command_args[0] == "COMMIT") {
-        // Format: COMMIT repo branch_name relative_path source_path author email
+        // Format: COMMIT repo branch_name relative_path source_path author email username
         // num_of_tracelevel num_of_branch [path level]* [path branch]*
-        if (command_args.size() < 9) {
+        if (command_args.size() < 10) {
             LOG("Format error for COMMIT command. Command args not enough. Given: %ld",
                     command_args.size());
         } else {
@@ -123,12 +123,13 @@ void ResponseForClient(int client_sockfd)
             String& source_path = command_args[4];
             String& author_name = command_args[5];
             String& author_email = command_args[6];
-            int trace_level_size = atoi(command_args[7].c_str());
-            int branch_manager_size = atoi(command_args[8].c_str());
+            String& username = command_args[7];
+            int trace_level_size = atoi(command_args[8].c_str());
+            int branch_manager_size = atoi(command_args[9].c_str());
 
-            size_t branch_start_index, trace_level_start_index = 9;
+            size_t branch_start_index, trace_level_start_index = 10;
 
-            int required_args_size = 9 + 2 * (trace_level_size + branch_manager_size);
+            int required_args_size = 10 + 2 * (trace_level_size + branch_manager_size);
             if (command_args.size() < required_args_size) {
                 LOG("Command args not enough! Required:%d, Given: %ld",
                         required_args_size, command_args.size());
@@ -147,7 +148,7 @@ void ResponseForClient(int client_sockfd)
             vcs->username(author_name);
             vcs->user_email(author_email);
 
-            vcs->PartialCommit(repo_name, branch_name, relative_path, source_path,
+            vcs->PartialCommit(repo_name, branch_name, relative_path, source_path, username,
                     trace_level_manager, branch_manager);
         }
     } else if (command_args[0] == "GETHEAD") {

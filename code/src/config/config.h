@@ -56,6 +56,9 @@ class RepoConfig {
         String user_email() const { return user_email_; }
         void user_email(const String& value) { user_email_ = value; }
 
+        String user_account() const { return user_account_; }
+        void user_account(const String& value) { user_account_ = value; }
+
         const Map<String, TraceLevel>* trace_level_map() {
             return trace_level_manager_.trace_level_map();
         }
@@ -89,6 +92,9 @@ class RepoConfig {
         // user name and email
         String username_;
         String user_email_;
+
+        // user account
+        String user_account_;
 };
 
 #endif // CONFIG_CONFIG_H_

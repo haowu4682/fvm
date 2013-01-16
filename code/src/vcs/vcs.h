@@ -49,14 +49,16 @@ class VersionControlSystem {
                 const String& branch_name,
                 const String& relative_path,
                 const String& work_dir,
+                const String& username,
                 IsIncludeOperator &IsIncluded,
                 BranchOperator &GetBranch) = 0;
 
         // Checkout a commit
         virtual int Checkout(const String& repo_pathname,
-            const String& commit_id,
-            const String& relative_path,
-            const String& destination_path) = 0;
+                const String& commit_id,
+                const String& relative_path,
+                const String& destination_path,
+                const String& username) = 0;
 
         // Retrieve the HEAD commit
         virtual int GetHead(const String& repo_pathname,

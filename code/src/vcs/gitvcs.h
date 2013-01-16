@@ -52,15 +52,17 @@ class GitVCS : public VersionControlSystem {
 
         // Checkout a commit
         virtual int Checkout(const String& repo_pathname,
-            const String& commit_id,
-            const String& relative_path,
-            const String& destination_path);
+                const String& commit_id,
+                const String& relative_path,
+                const String& destination_path,
+                const String& username);
 
         // Partial commit
         virtual int PartialCommit(const String& repo_pathname,
                 const String& branch_name,
                 const String& relative_path,
                 const String& work_dir,
+                const String& username,
                 IsIncludeOperator &IsIncluded,
                 BranchOperator &GetBranch);
 
@@ -84,19 +86,19 @@ class GitVCS : public VersionControlSystem {
 
         // Auxilary functions
         int ReadAccessList(
-            // Output
-            AccessList& access_list,
-            // Input
-            git_repository* repo,
-            git_tree* root_tree);
+                // Output
+                AccessList& access_list,
+                // Input
+                git_repository* repo,
+                git_tree* root_tree);
 
         int WriteAccessList(
-            // Output
-            git_tree** new_root_tree,
-            // Input
-            git_repository* repo,
-            const AccessList& access_list,
-            git_tree* old_root_tree);
+                // Output
+                git_tree** new_root_tree,
+                // Input
+                git_repository* repo,
+                const AccessList& access_list,
+                git_tree* old_root_tree);
 };
 
 #endif // VCS_GITVCS_H_

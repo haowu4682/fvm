@@ -55,13 +55,21 @@ void FVMClient::Disconnect() {
 
 // Make a partial checkout call to the daemon
 int FVMClient::Checkout(const String &repo_path, const String &link_src,
-        const String &link_dst, const String &commit_id)
+        const String &link_dst, const String &commit_id, RepoConfig *config)
 {
     std::ostringstream command_sout;
     command_sout << "CHECKOUT " << repo_path << ' '
                  << commit_id << ' '
                  << link_src << ' '
                  << link_dst;
+
+    if (config != NULL) {
+        command_sout << ' ' << config->user_account();
+    } else {
+        LOG("FVM Client requires a config for commit and checkout!");
+        return -1;
+    }
+
     String command_line = command_sout.str();
 
     int rc = write(sockfd_, command_line.c_str(), command_line.size());
@@ -88,7 +96,11 @@ int FVMClient::Commit(const String &repo_path, const String &link_src,
                  << username_ << ' '
                  << user_email_;
     if (config != NULL) {
+        command_sout << ' ' << config->user_account();
         trace_level_map = config->trace_level_map();
+    } else {
+        LOG("FVM Client requires a config for commit and checkout!");
+        return -1;
     }
 
     if (branch_manager != NULL) {

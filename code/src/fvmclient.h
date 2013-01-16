@@ -33,7 +33,8 @@ class FVMClient {
 
         // Make a partial checkout call to the daemon
         int Checkout(const String &repo_path, const String &link_src,
-                const String &link_dst, const String &commit_id);
+                const String &link_dst, const String &commit_id,
+                RepoConfig *config);
 
         // Make a partial commit call to the daemon
         int Commit(const String &repo_path, const String &link_src,

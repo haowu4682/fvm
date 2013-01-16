@@ -1043,16 +1043,14 @@ int GitVCS::GetChangeList(const String& repo_pathname,
 int GitVCS::Checkout(const String& repo_pathname,
         const String& commit_id,
         const String& relative_path,
-        const String& destination_path)
+        const String& destination_path,
+        const String& username)
 {
     int rc;
     git_repository *repo;
     git_tree *commit_tree;
     git_oid relative_oid, commit_oid;
     AccessList access_list;
-
-    // TODO Move into parameter
-    String username = username_;
 
     // Step 1: Open repository
     //
@@ -1124,6 +1122,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
         const String& branch_name,
         const String& relative_path,
         const String& work_dir,
+        const String& username,
         IsIncludeOperator &IsIncluded,
         BranchOperator &GetBranch)
 {
@@ -1190,7 +1189,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
 
     // Step 5: Create partial trees
     // TODO Fix old commit tree problem
-    rc = CreateObjectRecursive(&partial_oid, NULL, &old_access_list, repo, username_,
+    rc = CreateObjectRecursive(&partial_oid, NULL, &old_access_list, repo, username,
             branch_name, work_dir, relative_path, old_commit_tree_id,// NULL,
             &new_access_list, IsIncluded, GetBranch);
     if (rc < 0) {
