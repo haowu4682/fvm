@@ -7,13 +7,14 @@
 
 #include <common/common.h>
 
-class AccessInfo {
+class AccessList {
     public:
-        bool IsIncluded(const String& username, const String& groupname);
+        bool IsIncluded(const String& username, const String& groupname) const;
         void AddUser(const String& username, const String& groupname);
         void RemoveUser(const String& username, const String& groupname);
 
         String ToString() const;
+        void ToStream(std::ostream& output_stream) const;
         void FromString(const String& input);
         void FromStream(std::istream& input_stream);
 

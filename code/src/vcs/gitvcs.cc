@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <vector>
 
+#include <common/accessinfo.h>
 #include <common/common.h>
 #include <common/util.h>
 #include <vcs/gitvcs.h>
@@ -167,6 +168,57 @@ GitTreeEntryName::GitTreeEntryName(const String& name, const struct stat* stat)
 {
     Init(name, stat);
 }
+
+enum FileOperation {
+    kRead,
+    kWrite
+};
+
+// Whether a user has permission to access a file
+bool HasPermission(const String& username,
+        FileOperation op,
+        const GitTreeEntryName& entry_name,
+        const AccessList& access_list)
+{
+    assert(op == kRead || op == kWrite);
+
+    if (entry_name.name == username) {
+        if (op == kRead) {
+            if (entry_name.mode && S_IRUSR) {
+                return true;
+            }
+        } else {
+            if (entry_name.mode && S_IWUSR) {
+                return true;
+            }
+        }
+    }
+
+    if (access_list.IsIncluded(username, entry_name.group)) {
+        if (op == kRead) {
+            if (entry_name.mode && S_IRGRP) {
+                return true;
+            }
+        } else {
+            if (entry_name.mode && S_IWGRP) {
+                return true;
+            }
+        }
+    }
+
+    if (op == kRead) {
+        if (entry_name.mode && S_IROTH) {
+            return true;
+        }
+    } else {
+        if (entry_name.mode && S_IWOTH) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 
 // Retrieve the HEAD commit
 int RetrieveHeadOid(git_reference* head_ref,
@@ -411,6 +463,8 @@ struct GitTreeWriteCallbackPayload {
     git_repository *repo;
     const String *destination;
 //    GitTreeEntryName info;
+    AccessList *access_list;
+    const String *username;
 };
 
 // TODO Remove replication
@@ -447,7 +501,12 @@ int GitTreeWriteCallback(const char *root,
     GitTreeEntryName tree_entry_name;
     tree_entry_name.FromString(entry_name_str);
 
-    // Step 2 Get child path
+    // Step 2 Check access permission
+    if (!HasPermission(*data->username, kRead, tree_entry_name, *data->access_list)) {
+        return 0;
+    }
+
+    // Step 3 Get child path
     std::ostringstream file_name_stream;
     file_name_stream << *data->destination << "/" << GetRealPath(root);
     file_name_stream << tree_entry_name.name;
@@ -456,7 +515,7 @@ int GitTreeWriteCallback(const char *root,
             root, tree_entry_name.name.c_str());
     DBG("file name:%s", file_name.c_str());
 
-    // Step 3 Create file/dir for child
+    // Step 4 Create file/dir for child
     git_otype entry_type = git_tree_entry_type(entry);
     const git_oid *entry_oid;
     git_blob *entry_blob;
@@ -483,14 +542,17 @@ int GitTreeWriteCallback(const char *root,
     return 0;
 }
 
-int GitTreeWrite(git_repository *repo, git_tree *tree, const String& destination)
+int GitTreeWrite(git_repository *repo, git_tree *tree, const String& destination,
+        const String& username, AccessList &list)
 {
     int rc;
 
     struct GitTreeWriteCallbackPayload data;
     data.repo = repo;
     data.destination = &destination;
-//    data.info = name;
+    data.username = &username;
+    data.access_list = &list;
+
     rc = git_tree_walk(tree, GitTreeWriteCallback, GIT_TREEWALK_PRE, &data);
     if (rc < 0) {
         LOG("Cannot write the files into destination. Errorcode = %d", rc);
@@ -500,7 +562,11 @@ int GitTreeWrite(git_repository *repo, git_tree *tree, const String& destination
     return 0;
 }
 
-int GitObjectWrite(git_repository *repo, const git_oid *root_oid, const String& destination)
+int GitObjectWrite(git_repository *repo,
+        const git_oid *root_oid,
+        const String& destination,
+        const String& username,
+        AccessList &access_list)
 {
     git_otype root_type;
     git_object *root_object;
@@ -526,7 +592,7 @@ int GitObjectWrite(git_repository *repo, const git_oid *root_oid, const String& 
                 LOG("Error in git data structure: tree is not found.");
             }
 
-            GitTreeWrite(repo, root_tree, destination);
+            GitTreeWrite(repo, root_tree, destination, username, access_list);
             break;
 
         case GIT_OBJ_BLOB:
@@ -639,10 +705,12 @@ int CombineObject(git_tree **new_root_tree,
 //         1 Object not created because it is not included, or not with the name
 //           of the branch.
 //         <0 Error code.
+// TODO implement access list usage
 int CreateObjectRecursive(
         // Output
         git_oid *source_oid,
         struct stat *source_stat,
+        AccessList *new_access_list,
 
         // Input
         git_repository *repo,
@@ -650,6 +718,7 @@ int CreateObjectRecursive(
         const String& source_path,
         const String& relative_path,
         const git_oid *old_object_oid,
+        AccessList *old_access_list,
 
         // Operator
         IsIncludeOperator &IsIncluded,
@@ -675,7 +744,7 @@ int CreateObjectRecursive(
     stat(source_path.c_str(), source_stat);
 
     if (S_ISREG(source_stat->st_mode)) {
-        // TODO Optimize, do not check sub directory
+        // TODO Check access list
         if (!IsIncluded(relative_path) || source_branch_name != branch_name) {
             if (old_object_oid != NULL) {
                 git_oid_cpy(source_oid, old_object_oid);
@@ -683,6 +752,7 @@ int CreateObjectRecursive(
             }
             return 1;
         }
+
 
         // Create a blob for the file
         rc = git_blob_create_fromdisk(source_oid, repo, source_path.c_str());
@@ -757,9 +827,10 @@ int CreateObjectRecursive(
 
 
             // Recursively call the function to create an object for the child
-            rc = CreateObjectRecursive(&child_oid, &child_stat, repo, branch_name,
-                    child_absolute_path.c_str(), child_relative_path.c_str(),
-                    old_child_oid, IsIncluded, GetBranch);
+            rc = CreateObjectRecursive(&child_oid, &child_stat, new_access_list,
+                    repo, branch_name, child_absolute_path.c_str(),
+                    child_relative_path.c_str(), old_child_oid, old_access_list,
+                    IsIncluded, GetBranch);
             if (rc < 0) {
                 DBG("Failure in recursively create the object!");
                 return rc;
@@ -807,6 +878,93 @@ int CreateObjectRecursive(
     return 0;
 }
 
+// Read in the access list
+int GitVCS::ReadAccessList(
+        // Output
+        AccessList& access_list,
+
+        // Input
+        git_repository* repo,
+        git_tree* root_tree)
+{
+    int rc;
+    git_blob* access_list_file_blob;
+
+    const git_tree_entry* access_list_file_entry = git_tree_entry_byname(
+            root_tree, access_list_filename_.c_str());
+    if (access_list_file_entry == NULL) {
+        return -1;
+    }
+
+    const git_oid* access_list_file_id = git_tree_entry_id(
+            access_list_file_entry);
+    if (access_list_file_id == NULL) {
+        return -1;
+    }
+
+    rc = git_blob_lookup(&access_list_file_blob, repo, access_list_file_id);
+    if (rc < 0) {
+        return rc;
+    }
+
+    const void* access_list_buf = git_blob_rawcontent(access_list_file_blob);
+    git_off_t access_list_bufsize = git_blob_rawsize(access_list_file_blob);
+    if (access_list_buf == NULL) {
+        // This means that the blob has no content, which means the access list
+        // is empty. We shall return safely without adding content in the access
+        // list.
+        return 0;
+    }
+
+    // Read in the access list
+    String access_list_str((const char *)access_list_buf, access_list_bufsize);
+    access_list.FromString(access_list_str);
+
+    return 0;
+}
+
+int GitVCS::WriteAccessList (
+        // Output
+        git_tree** new_root_tree,
+
+        // Input
+        git_repository* repo,
+        const AccessList& access_list,
+        git_tree* old_root_tree)
+{
+    int rc;
+    git_oid access_list_file_id, new_root_tree_id;
+    git_treebuilder* builder;
+
+    git_treebuilder_create(&builder, old_root_tree);
+
+    String access_list_str = access_list.ToString();
+    git_blob_create_frombuffer(&access_list_file_id, repo,
+            access_list_str.c_str(), access_list_str.size());
+
+    rc = git_treebuilder_insert(NULL, builder, access_list_filename_.c_str(),
+            &access_list_file_id, GIT_FILEMODE_BLOB);
+    if (rc < 0) {
+        LOG("Cannot insert access list!");
+        return rc;
+    }
+
+    rc = git_treebuilder_write(&new_root_tree_id, repo, builder);
+    if (rc < 0) {
+        LOG("Cannot write the tree into the repo!");
+        return rc;
+    }
+
+    rc = git_tree_lookup(new_root_tree, repo, &new_root_tree_id);
+    if (rc < 0) {
+        LOG("Cannot find the root tree we just wrote to the repository!");
+    }
+
+    git_treebuilder_free(builder);
+
+    return 0;
+}
+
 // Get the change list for a specific repository
 // Return the number of items to be included in the change list.
 int GitVCS::GetChangeList(const String& repo_pathname,
@@ -846,9 +1004,10 @@ int GitVCS::Checkout(const String& repo_pathname,
     git_repository *repo;
     git_tree *commit_tree;
     git_oid relative_oid, commit_oid;
+    AccessList access_list;
 
     // TODO Move into parameter
-    String username;
+    String username = username_;
 
     // Step 1: Open repository
     //
@@ -885,14 +1044,21 @@ int GitVCS::Checkout(const String& repo_pathname,
     DBG("Relative root is");
     PrintOid(&relative_oid);
 
-    // Step 4: Overwrite files in destination
-    rc = GitObjectWrite(repo, &relative_oid, destination_path);
+    // Step 4: Read access list
+    rc = ReadAccessList(access_list, repo, commit_tree);
+    if (rc < 0) {
+        LOG("Failure: Cannot read access list");
+        return rc;
+    }
+
+    // Step 5: Overwrite files in destination
+    rc = GitObjectWrite(repo, &relative_oid, destination_path, username, access_list);
     if (rc < 0) {
         LOG("Failure: Cannot write into %s", destination_path.c_str());
         return rc;
     }
 
-    // Step 5: Free resource
+    // Step 6: Free resource
     git_tree_free(commit_tree);
     git_repository_free(repo);
 
@@ -925,6 +1091,8 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     const git_oid *old_commit_tree_id;
     git_tree *new_commit_tree, *old_commit_tree;
     git_commit *old_commit, *new_commit;
+
+    AccessList old_access_list, new_access_list;
 
     // Step 1: Open repository
     rc = git_repository_open(&repo, repo_pathname.c_str());
@@ -968,9 +1136,18 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     PrintTree(old_commit_tree);
 #endif
 
-    // Step 4: Create partial trees
-    rc = CreateObjectRecursive(&partial_oid, NULL, repo, branch_name,
-            work_dir, relative_path, old_commit_tree_id, IsIncluded, GetBranch);
+    // Step 4: Get old access list
+    rc = ReadAccessList(old_access_list, repo, old_commit_tree);
+    if (rc < 0) {
+        LOG("Failed to read access list!");
+        return rc;
+    }
+
+    // Step 5: Create partial trees
+    // TODO Fix old commit tree problem
+    rc = CreateObjectRecursive(&partial_oid, NULL, &old_access_list, repo,
+            branch_name, work_dir, relative_path, old_commit_tree_id,
+            &new_access_list, IsIncluded, GetBranch);
     if (rc < 0) {
         LOG("Failed to create the partial tree!");
         return rc;
@@ -991,7 +1168,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     }
 #endif
 
-    // Step 5: Create new trees
+    // Step 6: Create new trees
     rc = CombineObject(&new_commit_tree, repo, old_commit_tree, &partial_oid, relative_path);
     if (rc < 0) {
         LOG("Failed to combine old commit with the new one!");
@@ -1004,7 +1181,14 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     PrintTree(new_commit_tree);
 #endif
 
-    // Step 6: Create author and committer information
+    // Step 7: Create new access list
+    rc = WriteAccessList(&new_commit_tree, repo, new_access_list, new_commit_tree);
+    if (rc < 0) {
+        LOG("Failed to read access list!");
+        return rc;
+    }
+
+    // Step 8: Create author and committer information
     rc = git_signature_now(&author, username_.c_str(), user_email_.c_str());
     if (rc < 0) {
         LOG("Failure: Cannot create the author.");

@@ -5,25 +5,38 @@
 #include <common/accessinfo.h>
 #include <common/util.h>
 
-bool AccessInfo::IsIncluded(const String& username, const String& groupname)
+bool AccessList::IsIncluded(const String& username, const String& groupname) const
 {
-    return group_map_[groupname].count(username);
+    Map<String, Set<String> >::const_iterator it = group_map_.find(groupname);
+    if (it == group_map_.end()) {
+        return false;
+    }
+
+    const Set<String>& user_set = it->second;
+    return user_set.count(username);
 }
 
-void AccessInfo::AddUser(const String& username, const String& groupname)
+void AccessList::AddUser(const String& username, const String& groupname)
 {
     group_map_[groupname].insert(groupname);
 }
 
-void AccessInfo::RemoveUser(const String& username, const String& groupname)
+void AccessList::RemoveUser(const String& username, const String& groupname)
 {
     group_map_[groupname].erase(groupname);
 }
 
-String AccessInfo::ToString() const
+String AccessList::ToString() const
 {
     std::ostringstream os;
 
+    ToStream(os);
+
+    return os.str();
+}
+
+void AccessList::ToStream(std::ostream& os) const
+{
     for (Map<String, Set<String> >::const_iterator it = group_map_.begin();
             it != group_map_.end(); ++it) {
         os << it->first;
@@ -33,18 +46,16 @@ String AccessInfo::ToString() const
         }
         os << std::endl;
     }
-
-    return os.str();
 }
 
-void AccessInfo::FromString(const String& input)
+void AccessList::FromString(const String& input)
 {
     std::istringstream is(input);
 
     FromStream(is);
 }
 
-void AccessInfo::FromStream(std::istream& input_stream)
+void AccessList::FromStream(std::istream& input_stream)
 {
     Vector<String> input_str_array;
     readline(input_stream, input_str_array);

@@ -3,10 +3,12 @@
 #ifndef VCS_GITVCS_H_
 #define VCS_GITVCS_H_
 
+#include <git2.h>
 #include <string>
 #include <sys/stat.h>
 #include <vector>
 
+#include <common/accessinfo.h>
 #include <common/common.h>
 #include <vcs/vcs.h>
 
@@ -30,7 +32,7 @@ struct GitTreeEntryName {
 class GitVCS : public VersionControlSystem {
     public:
         // Constructors
-        GitVCS() {}
+        GitVCS() : access_list_filename_(".fvmaccesslist") {}
         virtual ~GitVCS() {}
 
         // Mutators
@@ -77,6 +79,24 @@ class GitVCS : public VersionControlSystem {
     private:
         String username_;
         String user_email_;
+        // TODO Make access list position configurable
+        String access_list_filename_;
+
+        // Auxilary functions
+        int ReadAccessList(
+            // Output
+            AccessList& access_list,
+            // Input
+            git_repository* repo,
+            git_tree* root_tree);
+
+        int WriteAccessList(
+            // Output
+            git_tree** new_root_tree,
+            // Input
+            git_repository* repo,
+            const AccessList& access_list,
+            git_tree* old_root_tree);
 };
 
 #endif // VCS_GITVCS_H_
