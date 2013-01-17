@@ -76,6 +76,8 @@ void RepoConfig::ReadFromStream(std::istream& config_stream)
             username_ = config_line[1];
         } else if (config_line[0] == "user_email") {
             user_email_ = config_line[1];
+        } else if (config_line[0] == "user_account") {
+            user_account_ = config_line[1];
         } else {
             LOG("Unknown config item: %s", config_line[0].c_str());
         }

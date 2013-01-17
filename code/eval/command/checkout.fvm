@@ -1,0 +1,4 @@
+server localhost 1096
+link /home/haowu/test/test_repo.git / /home/haowu/test/test_repo_mount
+exit
+
