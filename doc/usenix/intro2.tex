@@ -23,7 +23,13 @@ directed path from the commit history graph. A branch is often used to separate
 the changes of a subset of files such that those changes are temporarily
 independent from the other changes.\HP{Or we can say "the commits have no
 dependencies"} A user may need to commit different files to commits of different
-branches. For example, \hw{Mention motivation case \#4 here.}
+branches. For example, a graduate student who is going to submit a paper to a
+conference has two tasks: (1) writing the paper; (2) running experiments. The
+files created by two tasks are related, so they should belong to the same
+repository. But in pratice they often belong to different branches so that the
+modification on one task does not affect the other. The student wants to have
+all the changes to files in "doc/" go to one branch, and changes of files in
+"code/" to another branch.
 
 Most systems manage the access control in a repository-based way. In this way,
 the administrator needs to create different repositories for different access
@@ -36,8 +42,10 @@ hard to manage.
 
 For the branch problem, it is possible but complicated for a user to maintain
 multiple branches. One way for a user to do that is to maintain multiple copies
-of a repository, while each copy has one of the branches. Another way is to
-frequently performs "checkout" command on different branches.
+of a repository, while each copy has one of the branches. In this way, the user
+has to replicate the files, which cost extra disk space. Another way is to
+frequently performs "checkout" command on different branches, which costs a lot
+of time, both for the user and for the machine.
 
 One of the reasons for the problems is that VCSs today often
 make two implicit assumptions. First, a repository is considered to be
