@@ -101,11 +101,11 @@ graphs/%.pdf: gp/%.sh $(BARGRAPHDRIVER) data-stamp
 	@rm -f $@~
 	$< 
 
-# convert SVG figures to PDF
-#fig/%.pdf: fig/%.svg
-	#@rm -f $@~
-	#inkscape --export-pdf=$@~ $<
-	#mv -f $@~ $@
+#convert SVG figures to PDF
+fig/%.pdf: fig/%.svg
+	@rm -f $@~
+	inkscape --export-pdf=$@~ $<
+	mv -f $@~ $@
 
 $(STYLINK):
 	rm -f $@
