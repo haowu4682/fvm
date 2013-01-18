@@ -1,15 +1,14 @@
 \section{Design of \sys}
 \label{s:design}
 
-\input{fig-arch-abstract}
+%\input{fig-arch-abstract}
 
-Figure \ref{f:arch-abstract} \hw{TODO graph} shows the architecture of \sys.
-\hw{Describe each part in \sys.}
+%Figure \ref{f:arch-abstract} \hw{TODO graph} shows the architecture of \sys.
+%\hw{Describe each part in \sys.}
 %\hw{One small paragraph to remind the user that we use \git data model basics.}
 
 \subsection{Data Model}
 
-%\hw{copied from design\_v2.txt}
 As said before, \sys separates the \emph{repository} and the \emph{working
 directory} (\emph{workdir}). A repository is a database which stores files
 and directories of a file system. The repository is stored on the server
@@ -18,17 +17,37 @@ contain a subset of files from a repository, and allows the user to view and
 modify. (A user cannot view and modify files from a repository directly.) The
 workdir belongs to the client machine.
 
-\hw{Consider briefly introducing commit, tree and blob here.}
+Similar to \git, \sys names every object by the hash value of its content.
+The commits are managed in a DAG structure.% shown in Figure \textred{XXX}.
+%\HP{TODO: insert the figure.}
+Each commit in \sys has 0, 1, or several parents,\HP{Is there any better way to
+express this?} a tree showing the status of the root of the files in the commit, and
+some additional information (commit time, author, message, etc.). This is the
+same with \git design. This paper will call the tree "root tree" in the
+following text.
 
-\hw{TODO Include a figure showing the relation between repository and workdir:
-notes/gv/partial.dot.pdf.}
+\input{fig-data-model}
 
-% Partial checkout/commit stuff
-Figure \ref{f:partial-data-model} shows the relation between the workdir and the
-corresponding commit in the repository. \hw{TODO: explain the figure.}
+Figure \ref{f:data-model} shows the structure of the root tree, as well as the
+relation between the workdir and the corresponding root tree in the repository.
+In \sys, similar to \git data model, a tree is an abstraction of the state
+of a directory, and a blob is an abstraction of the state of a regular file. A
+tree may have multiple tree entries, which point to subtrees and blobs. Unlike
+\git, \sys records access permission information in each tree entry, as depicted
+in the figure. \sys also stores some addtional access control information in the
+access control list. This paper will discuss about the access control things
+in a later section.
+
+In the figure, the user is working on the client side holding the workdir, and
+the server, as the storage of the repository, holds the root tree. The user is
+only able to view a subset of the root tree. Unlike \git, the user only holds the
+current working directory, instead of the whole commit history in the
+repository. The next subsection will discuss how \sys performs version control
+actions in this model.
+\HP{Mike, is the "B checks whether B holds all commits" still a problem? I
+think B does not need to check that in this model.}
 
 \subsection{Server Client Model}
-\hw{Consider combine this with the previous subsection.}
 
 It is much easier to solve the access control problem for version control in a
 server client model than in a fully distributed model.\HP{Talk about this in
@@ -44,11 +63,10 @@ guaranteed by \sys, which will be described in the next subsection.
 
 When the user wants to access a subset of files via \sys client, the client
 sends a request to the \Sys Daemon, and the \Sys Daemon will perform a related
-action. If the client needs to "checkout" a subset of files, \Sys Daemon will
-perform a partial checkout action; if the client needs to "commit" a subset of
+action. If the client needs to checkout a subset of files, \Sys Daemon will
+perform a partial checkout action; if the client needs to commit a subset of
 files, \Sys Daemon will perform a partial commit action. The details of the
 actions \Sys Daemon could perform is in Section \ref{s:daemon}.
-
 
 \subsection{Access Control Model}
 
