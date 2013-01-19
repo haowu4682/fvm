@@ -2,5 +2,25 @@
 \label{s:discussion}
 \label{s:disc}
 
-\textred{TBD}
+\textred{Talk about git submodule.}
+
+\textred{Talk about git subtree merge. The latex comment has some discussions.}
+
+\iffalse
+It seems to be a mechanism for "git merge". The mechanism is to combine two
+commit trees from different branches together to form a new commit tree.
+
+It has some similarity with "partial commit" in FVM, because what partial commit
+does is to merge the changes of the user's work dir (or a subtree) with the
+original commit tree. However there are differences. git subtree merge can only
+be applied to different branches, and as the document says, are used to merge
+two different projects together. Instead, FVM partial commit is used to combine
+the subset of changes with the (unchanged files) in old commit. Another
+difference is that in subtree merge, one of the tree becomes the subtree of
+another, but in FVM partial commit, a subset files (which does NOT need to be a
+tree!) replaces the same position in the old commit.
+
+So basically these are two different mechanisms. subtree merge cannot be used to
+solve our problems. We may include some discussions in the paper, if needed.
+\fi
 
