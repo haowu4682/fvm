@@ -1,3 +1,20 @@
 \subsection*{Abstract}
 
-\textred{TBD}
+%Talk about importance of access control in version control.
+Access control is an important feature when multiple users are sharing some
+common files. However, most popular version control systems nowadays do not
+support full access control. Although some retro version control systems based
+on file version have some kind of access control based on files, the feature is
+quite limited in recent systems like \git and \mercurial, which only allow the
+user to set permissions on the whole repository instead of invidual files and
+directories.
+
+%Talk about \sys.
+We propose \sys, a version control system based on \git with access control on
+both time and space. \Sys could restrict the user from viewing a subset of the
+commit history, as well as a subset of files in each commit.
+
+Besides access control, \sys has another objective: combine different branches
+into the same working directory. This is a useful feature when a user is working on
+different branches simultaneously.
+
