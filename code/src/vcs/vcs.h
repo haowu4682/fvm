@@ -8,6 +8,8 @@
 
 #include <common/common.h>
 
+#define kNotFastForward 15
+
 enum FileStatus {
     kUnModified,
     kModified,

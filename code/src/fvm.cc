@@ -209,13 +209,12 @@ void usage() {
 // Display Help Information
 int cmd_help(const Vector<String>& args)
 {
-
     // Display the universal help command
     if (args.size() > 1) {
         for (int i = 0; i < ARRAY_SIZE(fvm_commands); ++i) {
             if (args[0] == fvm_commands[i].cmd) {
                 // TODO: Display internal help information for every command
-                printf("No help information yet.\n");
+                printf("%s - %s\n", fvm_commands[i].cmd, fvm_commands[i].help_msg);
                 return 0;
             }
         }

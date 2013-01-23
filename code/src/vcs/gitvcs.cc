@@ -59,7 +59,7 @@ void PrintTreeEntry(const git_tree_entry *entry)
 
 void PrintTree(git_tree *tree)
 {
-    DBG("tree entry size = %d", git_tree_entrycount(tree));
+    DBG("tree entry size = %ld", git_tree_entrycount(tree));
     printf("name oid type\n");
     for (int i = 0; i < git_tree_entrycount(tree); ++i) {
         const git_tree_entry* entry = git_tree_entry_byindex(tree, i);
@@ -245,13 +245,13 @@ int RetrieveHeadOid(git_reference* head_ref,
 
     switch (git_reference_type(head_ref)) {
         case GIT_REF_OID:
-            head_oid = git_reference_oid(head_ref);
+            head_oid = git_reference_target(head_ref);
             git_oid_cpy(head_oid_out, head_oid);
             break;
 
         case GIT_REF_SYMBOLIC:
-            head_target_name = git_reference_target(head_ref);
-            rc = git_reference_name_to_oid(&head_target_oid, repo, head_target_name);
+            head_target_name = git_reference_symbolic_target(head_ref);
+            rc = git_reference_name_to_id(&head_target_oid, repo, head_target_name);
             if (rc < 0) {
                 LOG("Failure: Cannot retrieve the oid of the HEAD.");
                 return rc;
@@ -283,14 +283,14 @@ int RetrieveHeadName(git_reference* head_ref,
 
     switch (git_reference_type(head_ref)) {
         case GIT_REF_OID:
-            head_oid = git_reference_oid(head_ref);
+            head_oid = git_reference_target(head_ref);
             head_name_out = git_oid_tostr(head_name_buf, GIT_OID_HEXSZ+1, head_oid);
             head_name = head_name_out;
             break;
 
         case GIT_REF_SYMBOLIC:
-            head_target_name = git_reference_target(head_ref);
-            rc = git_reference_name_to_oid(&head_target_oid, repo, head_target_name);
+            head_target_name = git_reference_symbolic_target(head_ref);
+            rc = git_reference_name_to_id(&head_target_oid, repo, head_target_name);
             if (rc < 0) {
                 LOG("Failure: Cannot retrieve the oid of the HEAD.");
                 return rc;
@@ -563,7 +563,7 @@ int GitTreeWrite(git_repository *repo, git_tree *tree, const String& destination
     data.username = &username;
     data.access_list = &list;
 
-    rc = git_tree_walk(tree, GitTreeWriteCallback, GIT_TREEWALK_PRE, &data);
+    rc = git_tree_walk(tree, GIT_TREEWALK_PRE, GitTreeWriteCallback, &data);
     if (rc < 0) {
         LOG("Cannot write the files into destination. Errorcode = %d", rc);
         return rc;
@@ -923,6 +923,35 @@ created:
     return 0;
 }
 
+bool IsFastForward(git_repository *repo,
+        const String& branch_name,
+        const git_oid* head_id)
+{
+    int rc;
+    git_reference *ref;
+    git_oid ref_head_id;
+    bool equal;
+
+    // Step 1: Find the reference
+    rc = git_reference_lookup(&ref, repo, branch_name.c_str());
+    if (rc != 0) {
+        LOG("Branch is not found for %s", branch_name.c_str());
+        return false;
+    }
+
+    // Step 2: Find the reference head
+    rc = RetrieveHeadOid(ref, repo, &ref_head_id);
+    if (rc < 0) {
+        LOG("Branch head does not exist for %s", branch_name.c_str());
+        return false;
+    }
+
+    // Step 3: Check whether head is the same with the given parameter
+    equal = git_oid_equal(head_id, &ref_head_id);
+
+    return equal;
+}
+
 // Read in the access list
 int GitVCS::ReadAccessList(
         // Output
@@ -1120,6 +1149,7 @@ int GitVCS::Commit(const String& repo_pathname,
 
 // Commit the change into a specific repository, using the old commit id as the
 // base.
+// TODO Pass old commit id as a parameter
 int GitVCS::PartialCommit(const String& repo_pathname,
         const String& branch_name,
         const String& relative_path,
@@ -1134,10 +1164,14 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     git_reference *head_ref;
     git_oid partial_oid, old_commit_id, new_commit_id;
     const git_oid *old_commit_tree_id;
+    git_oid old_partial_tree_id;
     git_tree *new_commit_tree, *old_commit_tree;
     git_commit *old_commit, *new_commit;
 
     AccessList old_access_list, new_access_list;
+
+    // TODO Make parameter
+    bool CheckFastForward = false;
 
     // Step 1: Open repository
     rc = git_repository_open(&repo, repo_pathname.c_str());
@@ -1189,9 +1223,16 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     }
 
     // Step 5: Create partial trees
-    // TODO Fix old commit tree problem
+    // Get old partial tree
+    rc = GitTreeSearch(&old_partial_tree_id, NULL, repo, old_commit_tree, relative_path);
+
+    if (rc < 0) {
+        LOG("Failure: Path %s does not exist.", relative_path.c_str());
+        return rc;
+    }
+
     rc = CreateObjectRecursive(&partial_oid, NULL, &old_access_list, repo, username_,
-            branch_name, work_dir, relative_path, old_commit_tree_id,// NULL,
+            branch_name, work_dir, relative_path, &old_partial_tree_id,// NULL,
             &new_access_list, IsIncluded, GetBranch);
     if (rc < 0) {
         LOG("Failed to create the partial tree!");
@@ -1246,11 +1287,17 @@ int GitVCS::PartialCommit(const String& repo_pathname,
         return -1;
     }
 
-    // Step 7: Get branch information
+    // Step 9: Get branch information
     const char *reference_name_c_str = git_reference_name(head_ref);
     DBG("old reference name: %s", reference_name_c_str);
 
-    // Step 8: Create commit object
+    // Step 10: Create commit object
+    if (CheckFastForward) {
+        if (!IsFastForward(repo, branch_name, &old_commit_id)) {
+            return kNotFastForward;
+        }
+    }
+
     git_commit_create_v(
             &new_commit_id,
             repo,
@@ -1264,6 +1311,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
             old_commit);
 
     // Step 8 Free resource
+end:
     git_signature_free(author);
     git_signature_free(committer);
     git_tree_free(old_commit_tree);
@@ -1349,7 +1397,7 @@ int GitVCS::BranchCreate(const String& repo_name,
     int rc;
     git_repository *repo;
     git_reference *branch;
-    git_object *branch_head_object;
+    git_commit *branch_head_commit;
     git_oid branch_head_oid;
 
     // Step 1 Open repository
@@ -1366,7 +1414,7 @@ int GitVCS::BranchCreate(const String& repo_name,
         return rc;
     }
 
-    rc = git_object_lookup(&branch_head_object, repo, &branch_head_oid, GIT_OBJ_ANY);
+    rc = git_commit_lookup(&branch_head_commit, repo, &branch_head_oid);
     if (rc < 0) {
         LOG("Failure: Commit object cannot be found.");
         return rc;
@@ -1374,7 +1422,7 @@ int GitVCS::BranchCreate(const String& repo_name,
 
     // Step 3 Create branch
     rc = git_branch_create(&branch, repo, branch_name.c_str(),
-            branch_head_object, true);
+            branch_head_commit, true);
     if (rc < 0) {
         LOG("Failure: Cannot create new branch!");
         return rc;
