@@ -15,11 +15,41 @@ bullets.}
 
 Figure \ref{f:command} shows what a user could do with \sys.
 
-\hw{TODO: describe checkout}
+\emph{link} allows a user to copy files from the repository to the workdir.
+The user needs to provide the \emph{repository}, \emph{relative path}, and
+\emph{destination} for a \emph{link} command. \Sys client will copy all the files
+at \emph{relative path} in the most recent commit (or HEAD) of the
+\emph{repository} to the \emph{destination}. After that \sys will record those
+information for further commands.
 
-\hw{TODO: describe commit}
+\emph{checkout} is similar to \emph{link}, but it uses the information recorded
+in the previous \emph{link} command.
 
-\hw{TODO: describe branch mode}
+\emph{commit} is the reversed\HP{good word?} command of \emph{checkout}. It
+copies all the files from \emph{destination} to the \emph{relative path} in the
+most recent commit in \emph{repository}. It then creates a new commit for the
+result and makes it the most recent commit.
 
-\hw{TODO: describe other functionalities}
+During \emph{checkout} and \emph{commit} process, \sys will check access
+permissions. Section \ref{ss:access-model} describes how \sys checks that.
+
+\input{fig-checkout-commit}
+
+Figure \ref{f:checkout-commit} shows a result of a \emph{checkout} command and
+a \emph{commit} command. \hw{TODO Draw the graph.}
+
+\Sys branch mode is slightly different from the branch command of \git or other
+popular VCS. It allows the user to indicate a subset of files to the new branch.
+\Sys branch mode has two commands: \emph{branch-start} and \emph{branch-stop}.
+The \emph{branch-start} command allows the user to create a new branch for a
+specified \emph{subset} of files. During further \emph{checkout} and \emph{commit}
+command, that \emph{subset} of files will be from the new branch in the
+repository, while all the other files are still on its own repository. Figure
+\hw{TODO: Draw the figure} shows how the branch mode works in \sys.
+
+Note that if the user chooses the complete set of files in branch mode, every
+file will go to the new branch just as what \git branch mode does.
+
+\hw{TODO: describe other functionalities, including automatic tracking and trace
+level.}
 

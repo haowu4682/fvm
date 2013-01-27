@@ -8,6 +8,7 @@
 %\hw{One small paragraph to remind the user that we use \git data model basics.}
 
 \subsection{Data Model}
+\label{ss:data-model}
 
 As said before, \sys separates the \emph{repository} and the \emph{working
 directory} (\emph{workdir}). A repository is a database which stores files
@@ -69,6 +70,7 @@ files, \Sys Daemon will perform a partial commit action. The details of the
 actions \Sys Daemon could perform is in Section \ref{s:daemon}.
 
 \subsection{Access Control Model}
+\label{ss:access-model}
 
 The motivation scenarios suggest that \sys should have an access control method
 throughout both the time and the space. \hw{Check with section 2.}
@@ -180,7 +182,10 @@ the user can checkout previous commit for the OS configuration files without
 affecting all the other files.
 
 
+\iffalse
+We described this in the previous section.
 \subsection{Trace Level and Automatic Commit}
 \hw{Mention trace level and automatic commit stuff if we have space. This
 subsection should be relatively short. This is unimportant.}
+\fi
 
