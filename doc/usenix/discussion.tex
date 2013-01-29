@@ -3,23 +3,43 @@
 \label{s:disc}
 
 \subsection{\Sys and \git submodule}
-%\textred{Talk about git submodule.}
+\Git submodule\HP{TODO: cite Chapter 6.6 in git book} is a tool in \git which
+allows a user to include a project (repository) into another. The project to be included
+is called a submodule. \Git will consider the submodule a special object in the
+object tree in further commit. This special object contains the commit id of the
+submodule repository. The detail update of files in the submodule repository is
+contained in the commits in the submodule instead of the parent repository.
 
+Since \git submodule manages the submodule repository separately from the parent repository,
+it is possible to separate access control in \git submodule. The reason is that
+\git can set different permissions for the submodule repository and parent
+repository such that a user can visit the submodule repository but not the parent repository,
+or vice versa. \Git submodule can also have similar functionalities with partial
+checkout and partial commit, because a user can checkout or commit only to the
+submodule repository, instead of the whole parent project.
+
+However, \git submodule is not a great solution for our motivating problems.
+One of the reasons is that each submodule is actually an independent \git
+repository, making it impossible, or at least very difficult, to share a subset
+of a repository. Another deficiency for git submodule is that it does not
+provide a hierarchical structure, making it difficult to manage the submodules
+when the repository is becoming huge. Finally, \git submodule can only separate the
+access permissions by space, but not by time: a user with access to a submodule
+repository still has the permissions to visit all the history of it.
+
+\iffalse
 \subsection{\Sys and \git access management tools}
 %\textred{Talk about gitosis and gitolite, refer to Chapter 4 in git book.}
-\iffalse
 \fi
 
 \subsection{\Sys and \git subtree merge}
 %\textred{Talk about git subtree merge. The latex comment has some discussions.}
 
-\Git subtree merge is a kind of mechanism for \git merge. \hw{More word for git
-subtree merge.}
-\cite{git-subtree-merge}
-
-\iffalse
-It seems to be a mechanism for "git merge". The mechanism is to combine two
+\Git subtree merge is a kind of mechanism for \git merge.
+\cite{git-subtree-merge}\HP{cite chapter 6.7 in git book}
+The mechanism allows a user to combine two
 commit trees from different branches together to form a new commit tree.
+The basic usage of the mechanism is to merge two different projects into one.
 
 It has some similarity with "partial commit" in FVM, because what partial commit
 does is to merge the changes of the user's work dir (or a subtree) with the
@@ -28,10 +48,6 @@ be applied to different branches, and as the document says, are used to merge
 two different projects together. Instead, FVM partial commit is used to combine
 the subset of changes with the (unchanged files) in old commit. Another
 difference is that in subtree merge, one of the tree becomes the subtree of
-another, but in FVM partial commit, a subset files (which does NOT need to be a
-tree!) replaces the same position in the old commit.
+another, but in FVM partial commit, a subset files replaces the same position in the old commit.
 
-So basically these are two different mechanisms. subtree merge cannot be used to
-solve our problems. We may include some discussions in the paper, if needed.
-\fi
 

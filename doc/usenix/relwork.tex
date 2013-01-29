@@ -2,35 +2,75 @@
 \label{s:related}
 \label{s:relwork}
 
-\iffalse
-\subsection{VCS}
+\subsection{Client-Server Model VCS}
+We start by reviewing VCSs with client-server model. In this model, the server
+stores a repository, and the client needs to communicate with the server to
+perform actions. In some systems, the client could do some work locally, but
+basically it cannot work as a standalone piece.
 
-% Client server model
-We start by reviewing VCSs with client-server model. 
+Revision Control System (RCS)\cite{tichy82rcs} is used to maintain versions for a single file. It
+has the basic functionalities such as creating, logging and merging versions.
+Its disadvantage point is that it is designed to maintain versions for each
+single file. It does not provide a clear interface for combining different files
+into a repository.
 
-\hw{RCS/CVS/SVN}
+Concurrent Versions System (CVS)\cite{cvs} is a client-server model version control
+system. It improves RCS and supports grouping of files in a repository. It also
+allows different users to share a repository. However there are drawbacks for
+CVS. The client must connect to the server to perform normal version control
+actions. Also there is not a global state of versions - each file still has its
+own versioning.
 
-\hw{ClearCase}
+Apache Subversion (SVN)\cite{svn} is a successor of CVS. SVN has a similar data model and
+user's point of view with CVS. It allows more functions to be executed locally
+on the client side. However, it is still a client-server model, making the main
+problems of CVS still exist in SVN.
 
-\hw{Vesta}
+ClearCase\cite{clearcase} is a software configuration management (SCM) system. It provides versioning
+by using dynamic views. A view is a method to map normal files into versioned
+files. The view provides a way to automatically group file versions. However,
+views in ClearCase are often just snapshot views which is just similar to a
+regular commitment, or dynamic views which map into the most recent versions of
+files.
 
-% Distributed Model
+Vesta\cite{vesta} is a a SCM system created by Compaq Inc. Its basic data elemement is
+package. A package is a group of related files. The packages are in a
+hierarchical structure.
 
-\hw{GNU Arch/Monotone}
+Vesta's mechanisms for checkout and commit are also based on packages, so it
+provides a mechanism similar to partial checkout and partial commit with \sys.
+A user can checkout a package to client side, modify it and checkin it into the
+repository.
 
-\hw{Darcs}
+However Vesta still has its deficiencies. Vesta does not provide concurrency
+modification. If a user has already checked out a version of a package, other
+user who wants to checks out the same version cannot check in modifications of the
+same package. The branch specification for Vesta is awkward, and it only
+supports branching for each package instead of the whole repository. Finally it
+has no solution for access control problem.
 
-\hw{BitKeeper}
+\subsection{Distributed Model VCS}
 
-\hw{Mercurial}
+In a distributed model VCS, each client contains a copy of the whole repository.
+Each client can work as a standalone piece, while they could still communicate
+with each other. There are many existing systems with such a kind of design.
+GNU Arch\cite{gnuarch}, Monotone\cite{monotone}, Darcs\cite{darcs},
+BitKeeper\cite{bitkeeper}, Mercurial\cite{mercurial} and Git\cite{git} are
+several representative systems.
 
-\hw{Git}
+Mercurial is designed to be an alternative to BitKeeper. It stores file deltas
+in data storage. It uses data model called revlogs\cite{mackall06mercurial} to
+retrieve full files from the data. Its user interface is similar with Git.
 
-\subsection{Other tracking systems}
+Git\cite{git} is a popular revision control tool. Unlike normal tools, Git
+stores every single version of file as an independent blob. Each commit is a
+hierarchical structure of blobs. This kind of data model makes it very easy to
+checkout a previous commit and to create a new branch. However it makes a
+repository containing a lot of redundant information for files.
+
 % Time machine etc
 
 % Versioned file systems
-\fi
 
 %\subsection{}
 

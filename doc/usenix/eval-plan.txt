@@ -39,11 +39,11 @@ In each experiment, we collect {time-cost, space-cost, cpu/memory-cost,
 
 [MW: maybe call the above microbenchmarks?]
 
-2.2 Single user scenario
+2.2 Two-user scenario
 
-We firstly evaluate the performance when there is only 1 user using the
-systems. In this scenario, no network communication is required for all systems.
-So we will just evaluate the other aspects.
+In this scenario, we assume two users are using the same network file system.
+There is 1 server machine and 2 client machines. They all belong to the same
+data center.
 
 #1 Time cost
 
@@ -61,8 +61,8 @@ For a repository with fixed size $s$, do the following for each VCS:
 
 Plot $t_1$, $t_2$, and $t_3$ v.s $s$.
 
-[MW: I think instead of "over" above, you mean "versus." This, by the
-way, is a good thing to analyze.]
+During the previous experiments, we also record the CPU and memory cost for the
+VCS program. We will display them in a table.
 
 #2 Space cost
 
@@ -71,22 +71,11 @@ the repository size $r$ over the workdir size $w$.
 
 [MW: good.]
 
-#3 CPU/Memory cost
+#4 Network cost
 
-During the previous experiments, we also record the CPU and memory cost for the
-VCS program. We will display them in a table.
-
-[MW: suggest integrating #3 with #1. The time cost will be CPU cost +
-I/O latency, right?]
-
-2.3 Multiple user scenario
-
-In this scenario, we assume two users are using the same network file system.
-There is 1 server machine and 2 client machines. They all belong to the same
-data center.
-
-We will evaluate #1 - #3 again under this scenario. During each experiment we
-shall record the latency and network cost for the scenario.
+We record the amount of data transferred through the network, and the time cost
+through the network. We will run the experiments for multiple times and get the
+average and variation of the data.
 
 [MW: why/how is average RTT and jitter relevant? Aren't those metrics
 evaluating somethign at a different (lower) level of abstraction, namely
