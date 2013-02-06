@@ -19,8 +19,10 @@ modify. (A user cannot view and modify files from a repository directly.) The
 workdir belongs to the client machine.
 
 Similar to \git, \sys names every object by the hash value of its content.
-The commits are managed in a DAG structure.% shown in Figure \textred{XXX}.
+The commits are managed in a DAG structure.
+% shown in Figure \textred{XXX}.
 %\HP{TODO: insert the figure.}
+
 Each commit in \sys has 0, 1, or several parents,\HP{Is there any better way to
 express this?} a tree showing the status of the root of the files in the commit, and
 some additional information (commit time, author, message, etc.). This is the
@@ -78,11 +80,15 @@ Therefore, \sys uses a two dimensional \HP{Any good word here?} way to record
 access control information. One dimension is the access permissions in each
 file, the other dimension is an access control list in each commit.
 
-The access info\HP{Is this phrase good?} in each file is \unix-like.
+The access information\HP{Is this phrase good?} in each file is \unix-like.
+as shown in Figure \ref{f:data-model}.
+\HP{Is this clear?}
+\iffalse
 Figure 3-a \hw{TODO draw the graph} shows a sample of the access permission
 information of several files in a directory. Figure 3-b\hw{TODO draw the graph}
 shows how the access
 permission information is stored in the backend \git database.
+\fi
 
 The access info is the typical mechanism for access control in systems
 without version control. However, as motivation case \textred{XXX} suggests\HP{
@@ -118,7 +124,13 @@ read" or "global write" bit is set.
 The process then returns whether the user has the permission to access the file,
 correspondingly.
 
-\hw{TODO Describe how it solves motivation case \#1}
+Let us consider the first two scenarios in Section \ref{s:motivation}.
+\HP{Check with the context.}
+In the first scenario, the project manager could add the developer in a group
+which does not have the permission to access the files the developer should not
+be able to view. In the second scenario, the project manager can add the
+developer to the group with access permission in the access control list in the
+recent commit, so that the developer has no permission to access retro commits.
 
 \subsection{Branch Mode Model}
 

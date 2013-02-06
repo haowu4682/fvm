@@ -13,6 +13,10 @@ bullets.}
 
 \input{fig-command}
 
+\input{fig-checkout-commit}
+
+\input{fig-branch}
+
 Figure \ref{f:command} shows what a user could do with \sys.
 
 \emph{link} allows a user to copy files from the repository to the workdir.
@@ -33,10 +37,8 @@ result and makes it the most recent commit.
 During \emph{checkout} and \emph{commit} process, \sys will check access
 permissions. Section \ref{ss:access-model} describes how \sys checks that.
 
-\input{fig-checkout-commit}
-
 Figure \ref{f:checkout-commit} shows a result of a \emph{checkout} command and
-a \emph{commit} command. \hw{TODO Draw the graph.}
+a \emph{commit} command.
 
 \Sys branch mode is slightly different from the branch command of \git or other
 popular VCS. It allows the user to indicate a subset of files to the new branch.
@@ -45,7 +47,7 @@ The \emph{branch-start} command allows the user to create a new branch for a
 specified \emph{subset} of files. During further \emph{checkout} and \emph{commit}
 command, that \emph{subset} of files will be from the new branch in the
 repository, while all the other files are still on its own repository. Figure
-\hw{TODO: Draw the figure} shows how the branch mode works in \sys.
+\ref{f:branch} shows how the branch mode works in \sys.
 
 Note that if the user chooses the complete set of files in branch mode, every
 file will go to the new branch just as what \git branch mode does.
