@@ -1230,9 +1230,9 @@ int GitVCS::PartialCommit(const String& repo_pathname,
         return rc;
     }
 
-    rc = CreateObjectRecursive(&partial_oid, NULL, &old_access_list, repo, username_,
+    rc = CreateObjectRecursive(&partial_oid, NULL, &new_access_list, repo, username_,
             branch_name, work_dir, relative_path, &old_partial_tree_id,// NULL,
-            &new_access_list, IsIncluded, GetBranch);
+            &old_access_list, IsIncluded, GetBranch);
     if (rc < 0) {
         LOG("Failed to create the partial tree!");
         return rc;
