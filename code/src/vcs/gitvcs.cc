@@ -1230,6 +1230,8 @@ int GitVCS::PartialCommit(const String& repo_pathname,
         return rc;
     }
 
+    new_access_list = old_access_list;
+
     rc = CreateObjectRecursive(&partial_oid, NULL, &new_access_list, repo, username_,
             branch_name, work_dir, relative_path, &old_partial_tree_id,// NULL,
             &old_access_list, IsIncluded, GetBranch);
