@@ -1,9 +1,14 @@
 \section{Introduction}
 \label{s:intro}
 
+This paper revisits version control systems
+    (VCS), proposing new functionality for them.
 Version control systems (VCS) are used to maintain changes of user data,
-including code, document, multimedia data, etc.\HP{How to say the paper revisits
-the functionality of VCS? I could not find good sentences here.} Each single
+including code, document, multimedia data, etc.
+%\HP{How to say the paper revisits
+%the functionality of VCS? I could not find good sentences here.}
+% MW: see if the edit works for you.
+Each single
 change is usually called a "version", "revision" or "commit" in different
 systems. There are many ways to manage commits, but the most commonly used
 method is to keep them in a directed acyclic graph (DAG). Such a graph is called
@@ -22,7 +27,15 @@ different definitions of branches. In this paper, we consider a branch as a
 directed path from the commit history graph. A branch is often used to separate
 the changes of a subset of files such that those changes are temporarily
 independent from the other changes.\HP{Or we can say "the commits have no
-dependencies"} A user may need to commit different files to commits of different
+dependencies"}\MP{see ltx.}
+\iffalse
+It'd be better to communicate what is independent of what. Are you
+saying that the new changes do not depend on the old, or vice-versa?
+The problem with saying "X has a dependency" is that it is not clear
+whether the writer means that X depends on something Y, or that
+something Y depends on X.
+\fi
+A user may need to commit different files to commits of different
 branches. For example, a graduate student who is going to submit a paper to a
 conference has two tasks: (1) writing the paper; (2) running experiments. The
 files created by two tasks are related, so they should belong to the same
@@ -54,9 +67,13 @@ nothing at all. Second, the working directory of a user is a mirror to the
 repository: it loads a snapshot from the repository, and stores another snapshot
 into the repository after the user's modifications. \HP{How to explain this one?
 I want to say: the working directory contains the whole directory tree instead
-of a subset of it.}
+of a subset of it.}\MP{Just say that.}
 
 \input{fig-server-model}
+
+% MW: great job on this intro! This thing is clear, logical, and
+% compelling. The question will be whether the mechanism has enough
+% technical meat; but the motivation is great. Very nice work!!!
 
 We present the design, implementation and evaluation of \sys, a version control
 system which solves the issues we mentioned previously. As depicted in Figure
@@ -72,7 +89,8 @@ When the client wants to perform any action with the repository, it sends the
 request to the server, and the server will call an underlying VCS to perform
 the respective action with the data in the shared file system.
 \HP{Readers might wonder why we do not use a
-fully distributed model. We may need to explain it somewhere.}
+fully distributed model. We may need to explain it somewhere.}\MP{maybe
+explain it here briefly and/or point to a discussion?}
 
 In order for the user to checkout and commit to the repository while only
 accessible to a subset of the repository, \sys has a mechanism called partial
@@ -89,7 +107,8 @@ and tree. The server is responsible to check the
 access control list each time it performs an action to make sure that the user
 has the ability to perform the action.
 
-\sys provides a special branch mode for the users to manage branches. \Sys
+\sys provides a special branch mode\MP{should ``branch mode'' be
+italicized? (italicize when you introduce a term.)} for the users to manage branches. \Sys
 maintains a mapping from files to branch names. During the commit process, the
 change of a file only goes to the branch in the mapping, and the other branches
 still have the old version of the file.
@@ -97,15 +116,18 @@ still have the old version of the file.
 to be done in branch mode because it wants to avoid the "detached head" state in
 \git.}
 
-A user could use branch mode in \sys similar to popular version control systems.
+A user could use\MP{``user could use'' is awkward.} branch mode in \sys similar to popular version control systems.
 Unlike normal VCS, a user could specify a subset of files to be commited into a
 specified branch. In this way, a user can work with different files in different
 branch without duplicating a work directory. \hw{Motivation Case \#4 is an
 application of this.}
 
-During the design and implementation, \sys faces several challenges. First of
-all, \sys has to perform access control without affecting version control.
-Secondly, \sys has to allow a user to rollback without affecting the mainstream
+During the design and implementation, \sys faces several challenges.
+%First of all,
+First, \sys has to perform access control without affecting version control.
+\mw{Add a sentence explaining the tension between access control and
+version control.}
+Second, \sys has to allow a user to rollback without affecting the mainstream
 of a repository. Finally, \hw{the ability to allow different users to modify
 concurrently without affecting each other.}
 
@@ -113,13 +135,18 @@ For the first challenge, \sys assumes the server side could always be trusted.
 This is reasonable because the owner of a repository is often the person who
 chooses a server, and the owner is trusted to access the repository he or she creates.
 Under the assumption, the server side runs a daemon program which checks access abilities before
-doing any actual action. The daemon will hide information that the user should
-not read and ignore changes that the user could not write before doing
-any actual action. The daemon will hide information that the user should not
-read and ignore changes that the user could not write.
+doing any actual action.
+%The daemon will hide information that the user should
+%not read and ignore changes that the user could not write before doing
+%any actual action.
+The daemon will hide information that the user should not
+read and ignore changes that the user could not write.\MP{there was a typo. two
+versions of the same sentence. pls check to make sure that the correct
+one appears.}
 
 For the second challenge, \sys forces the user to use branch mode when the user
-checkout a retro commit.\HP{Similar to "detached HEAD" in git} User modification
+checkout a retro commit.\HP{Similar to "detached HEAD" in git}\MP{where
+is ``retro commit'' defined? define it here?} User modification
 will not be merged with mainstream\HP{master branch} unless the user explicitly
 specified it.
 
@@ -128,6 +155,8 @@ specified it.
 In our experiments, \hw{Fill in summary of evaluation.}
 
 \hw{TODO List of contributions.}
+\mw{also, allude to the related work treatment at the end of the paper,
+and forward point.}
 
 The rest of the paper is organized as follows. \hw{Introduce the following
 sections.}

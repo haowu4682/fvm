@@ -23,11 +23,16 @@ The commits are managed in a DAG structure.
 % shown in Figure \textred{XXX}.
 %\HP{TODO: insert the figure.}
 
-Each commit in \sys has 0, 1, or several parents,\HP{Is there any better way to
-express this?} a tree showing the status of the root of the files in the commit, and
+Each commit in \sys has zero or more \emph{parents},
+%0, 1, or several parents,\HP{Is there any better way to
+%express this?}
+% MW: see if the edit works for you
+a tree showing the status of the root of the files in the commit, and
 some additional information (commit time, author, message, etc.). This is the
-same with \git design. This paper will call the tree "root tree" in the
-following text.
+same with \git design. This paper will call the tree ``root tree" in the
+following text.\MP{note that to make Latex typeset quotations right, you
+want to use `` and '' rather than " (you can sometimes use " for '', but
+it's better to be consistent).}
 
 \input{fig-data-model}
 
@@ -38,8 +43,10 @@ of a directory, and a blob is an abstraction of the state of a regular file. A
 tree may have multiple tree entries, which point to subtrees and blobs. Unlike
 \git, \sys records access permission information in each tree entry, as depicted
 in the figure. \sys also stores some addtional access control information in the
-access control list. This paper will discuss about the access control things
-in a later section.
+access control list.\MP{fwd. point in parentheses to where it's
+discussed. the commented-out sentence was awkward.}
+%This paper will discuss about the access control things
+%in a later section.
 
 In the figure, the user is working on the client side holding the workdir, and
 the server, as the storage of the repository, holds the root tree. The user is
@@ -48,7 +55,8 @@ current working directory, instead of the whole commit history in the
 repository. The next subsection will discuss how \sys performs version control
 actions in this model.
 \HP{Mike, is the "B checks whether B holds all commits" still a problem? I
-think B does not need to check that in this model.}
+think B does not need to check that in this model.}\MP{I'm not sure. If
+you think it's not a problem, it's probably okay for now.}
 
 \subsection{Server Client Model}
 
@@ -57,7 +65,8 @@ server client model than in a fully distributed model.\HP{Talk about this in
 the discussion session or an appendix. See notes/distributed-model.txt for some
 discussions.} \hw{Summarize brief reasons here.}
 
-Basically, a server serves as the role of an administrator. The server side
+% MW: was "server serves", which was a bit awkward.
+Basically, a server has the role of an administrator. The server side
 program of \sys (a.k.a \Sys Daemon) has the permission to access any files in a
 repository stored on the server. The client side program, on the other hand, can
 only access the files that the user has permissions to access. \HP{Remind the
