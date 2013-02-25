@@ -1013,6 +1013,7 @@ int GitVCS::WriteAccessList (
     git_treebuilder_create(&builder, old_root_tree);
 
     String access_list_str = access_list.ToString();
+    LOG("access_list_str = %s", access_list_str.c_str());
     git_blob_create_frombuffer(&access_list_file_id, repo,
             access_list_str.c_str(), access_list_str.size());
 
@@ -1231,6 +1232,8 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     }
 
     new_access_list = old_access_list;
+    DBG("old_access_list = %s", old_access_list.ToString().c_str());
+    DBG("new_access_list = %s", new_access_list.ToString().c_str());
 
     rc = CreateObjectRecursive(&partial_oid, NULL, &new_access_list, repo, username_,
             branch_name, work_dir, relative_path, &old_partial_tree_id,// NULL,

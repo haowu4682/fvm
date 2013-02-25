@@ -18,12 +18,12 @@ bool AccessList::IsIncluded(const String& username, const String& groupname) con
 
 void AccessList::AddUser(const String& username, const String& groupname)
 {
-    group_map_[groupname].insert(groupname);
+    group_map_[groupname].insert(username);
 }
 
 void AccessList::RemoveUser(const String& username, const String& groupname)
 {
-    group_map_[groupname].erase(groupname);
+    group_map_[groupname].erase(username);
 }
 
 String AccessList::ToString() const
@@ -58,17 +58,15 @@ void AccessList::FromString(const String& input)
 void AccessList::FromStream(std::istream& input_stream)
 {
     Vector<String> input_str_array;
-    readline(input_stream, input_str_array);
 
-    for (size_t i = 0; i < input_str_array.size(); ++i) {
-        Vector<String> group_item_str_array;
-        split(input_str_array[i], " ", group_item_str_array);
+    //for (size_t i = 0; i < input_str_array.size(); ++i) {
+    while(input_stream) {
+        readline(input_stream, input_str_array);
 
-        if (!group_item_str_array.empty()) {
-            Set<String>& username_set = group_map_[group_item_str_array[0]];
+        if (!input_str_array.empty()) {
 
-            for (size_t i = 1; i < group_item_str_array.size(); ++i) {
-                username_set.insert(group_item_str_array[i]);
+            for (size_t i = 1; i < input_str_array.size(); ++i) {
+                group_map_[input_str_array[0]].insert(input_str_array[i]);
             }
         }
     }
