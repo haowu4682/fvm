@@ -16,6 +16,9 @@ CONFIGOBJ       := $(patsubst $(SRCDIR)/config/%.cc, $(BINDIR)/config/%.o, $(CON
 ENCRYPTHDR       := $(wildcard $(SRCDIR)/encrypt/*.h)
 ENCRYPTSRC       := $(wildcard $(SRCDIR)/encrypt/*.cc)
 ENCRYPTOBJ       := $(patsubst $(SRCDIR)/encrypt/%.cc, $(BINDIR)/encrypt/%.o, $(ENCRYPTSRC))
+BACKENDHDR       := $(wildcard $(SRCDIR)/backend/*.h)
+BACKENDSRC       := $(wildcard $(SRCDIR)/backend/*.cc)
+BACKENDOBJ       := $(patsubst $(SRCDIR)/backend/%.cc, $(BINDIR)/backend/%.o, $(BACKENDSRC))
 VCSHDR          := $(wildcard $(SRCDIR)/vcs/*.h)
 VCSSRC          := $(wildcard $(SRCDIR)/vcs/*.cc)
 VCSOBJ          := $(patsubst $(SRCDIR)/vcs/%.cc, $(BINDIR)/vcs/%.o, $(VCSSRC))
@@ -52,7 +55,11 @@ $(BINDIR)/encrypt/%.o: $(SRCDIR)/encrypt/%.cc $(COMMONHDR) $(ENCRYPTHDR)
 	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/encrypt
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-$(BINDIR)/vcs/%.o: $(SRCDIR)/vcs/%.cc $(VCSHDR) $(COMMONHDR)
+$(BINDIR)/backend/vcs/%.o: $(SRCDIR)/backend/%.cc $(BACKENDHDR) $(COMMONHDR)
+	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/backend
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+$(BINDIR)/vcs/%.o: $(SRCDIR)/vcs/%.cc $(VCSHDR) $(COMMONHDR) $(BACKENDHDR)
 	mkdir -p $(BINDIR); mkdir -p $(BINDIR)/vcs
 	$(CC) $(CFLAGS) -o $@ -c $<
 

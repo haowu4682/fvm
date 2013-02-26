@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <vector>
 
+#include <backend/backend.h>
 #include <common/accessinfo.h>
 #include <common/common.h>
 #include <common/util.h>
