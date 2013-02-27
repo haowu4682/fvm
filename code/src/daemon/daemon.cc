@@ -11,15 +11,34 @@
 #include <unistd.h>
 #include <vector>
 
+#include <libssh/libssh.h>
+#include <libssh/server.h>
+
 #include <common/common.h>
 #include <common/util.h>
 #include <config/branchmanager.h>
 #include <config/config.h>
+#include <daemon/daemon.h>
 #include <vcs/gitvcs.h>
 #include <vcs/vcs.h>
 
-GitVCS *vcs;
+#ifndef KEYS_FOLDER
+#define KEYS_FOLDER "/etc/ssh/"
+#endif // KEYS_FOLDER
 
+#if 0
+void Daemon::ReadPublicKeyMap(std::istream& in) {
+    // TODO Implement
+}
+
+void Daemon::WritePublicKeyMap(std::ostream& out) const {
+    // TODO Implement
+}
+#endif
+
+#if 0
+//// These are old design code, we keep them here in case we will use them
+//// later.
 class AlwaysTrueAdv : public IsIncludeOperator {
     virtual bool operator() (const String&) {
         return true;
@@ -84,9 +103,19 @@ String BranchManagerAdv::operator() (const String& pathname)
 {
     return GetBranch(pathname);
 }
+#endif
 
-void ResponseForClient(int client_sockfd)
+void Daemon::ResponseForClient(ssh_session session, ssh_channel channel)
 {
+    // TODO re-implement this using SSH channel
+    // TODO: Execute the command according to the command string
+}
+
+#if 0
+void Daemon::ResponseForClient(int sockfd)
+{
+//// These are old design code, we keep them here in case we will use them
+//// later.
     size_t size;
     char buffer[PATH_MAX + 100];
 
@@ -101,7 +130,6 @@ void ResponseForClient(int client_sockfd)
 
     split(buffer_str, " ", command_args);
 
-    // Execute the command according to the command string
     if (command_args[0] == "CHECKOUT") {
         // Format: CHECKOUT repo commit_id relative_path destination_path username
         if (command_args.size() < 6) {
@@ -171,8 +199,171 @@ void ResponseForClient(int client_sockfd)
         LOG("Undefined command: %s", command_args[0].c_str());
     }
 }
+#endif
 
-int ListenAndResponse(int port)
+// TODO Finish implementation
+bool CheckAuthentication(ssh_message message)
+{
+    return false;
+}
+
+int Daemon::ListenAndResponse()
+{
+    int rc;
+    ssh_bind sshbind;
+    ssh_session session;
+    ssh_channel channel;
+    ssh_message message;
+    bool auth;
+
+    // Initialize libssh structures
+    sshbind = ssh_bind_new();
+
+    // Set up default options
+    rc = ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDPORT, &port);
+    if (rc < 0) {
+        LOG("Cannot Set the port to listen! Daemon start fails.");
+        return rc;
+    }
+
+    rc = ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_RSAKEY,
+            KEYS_FOLDER "ssh_host_rsa_key");
+    if (rc < 0) {
+        LOG("Cannot Set the host rsa key! Daemon start fails.");
+        return rc;
+    }
+
+    rc = ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_DSAKEY,
+            KEYS_FOLDER "ssh_host_dsa_key");
+    if (rc < 0) {
+        LOG("Cannot Set the host dsa key! Daemon start fails.");
+        return rc;
+    }
+
+    // Listen and Accept
+    rc = ssh_bind_listen(sshbind);
+    if (rc < 0) {
+        LOG("Error listening to socket: %s", ssh_get_error(sshbind));
+        return rc;
+    }
+
+    for (;;) {
+        session = ssh_new();
+        auth = false;
+        channel = 0;
+
+        rc = ssh_bind_accept(sshbind, session);
+        if (rc < 0) {
+            LOG("Error accepting an incoming session: %s", ssh_get_error(sshbind));
+            // XXX Is "return rc" a better way here and in following similar
+            // context?
+            continue;
+        }
+
+        rc = ssh_handle_key_exchange(session);
+        if (rc < 0) {
+            LOG("Error exchange of key: %s", ssh_get_error(session));
+            continue;
+        }
+
+        // Authentication
+        do {
+            message = ssh_message_get(session);
+            if (!message) {
+                break;
+            }
+
+            switch (ssh_message_type(message)) {
+                case SSH_REQUEST_AUTH:
+                    switch (ssh_message_subtype(message)) {
+                        // Since public key is required in the system, we also
+                        // require the user to use public key authentication here.
+                        case SSH_AUTH_METHOD_PUBLICKEY:
+                            // TODO check public key authentication here.
+                            if (CheckAuthentication(message)) {
+                                auth = true;
+                                ssh_message_auth_reply_success(message, 0);
+                                break;
+                            }
+
+                            // If the user is trying to using a
+                            // wrong key, we just let the control flow going
+                            // through to reply rejection, thus we do not
+                            // insert "break" sentence here.
+
+                        default:
+                            // If the user is not using public key, we need to
+                            // tell the user to authenticate with PUBLICKEY
+                            // method.
+                            ssh_message_auth_set_methods(message,
+                                    SSH_AUTH_METHOD_PUBLICKEY);
+                            ssh_message_reply_default(message);
+                            break;
+                    }
+
+                    break;
+
+                default:
+                    // For non-authentication messge at the time,
+                    // reply with a default REJECTION to tell the user to
+                    // authenticate.
+                    ssh_message_reply_default(message);
+                    break;
+            }
+
+            ssh_message_free(message);
+        } while (!auth);
+
+        if (!auth) {
+            LOG("Authentication fails. Connection closed. Error msg: %s",
+                    ssh_get_error(session));
+            ssh_disconnect(session);
+            continue;
+        }
+
+        // TODO Open the channel
+        do {
+            message = ssh_message_get(session);
+            if (!message) {
+                break;
+            }
+
+            switch (ssh_message_type(message)) {
+                case SSH_REQUEST_CHANNEL_OPEN:
+                    if (ssh_message_subtype(message) == SSH_CHANNEL_SESSION) {
+                        channel = ssh_message_channel_request_open_reply_accept(message);
+                        break;
+                    }
+
+                default:
+                    // For a message other than channel open, we reject the
+                    // mesage.
+                    ssh_message_reply_default(message);
+            }
+
+            ssh_message_free(message);
+
+        } while(!channel);
+
+        if (!channel) {
+            LOG("Cannot open SSH channel! Error msg: %s", ssh_get_error(session));
+            ssh_disconnect(session);
+            continue;
+        }
+
+        // The child thread is responsible to free the session after it is used.
+        ResponseForClient(session, channel);
+    }
+
+    ssh_bind_free(sshbind);
+
+    return 0;
+}
+
+#if 0
+//// The following code is obsoleted, it does not use SSH protocol.
+//// We may get it back in the future so we keep it right here.
+int Daemon::ListenAndResponse()
 {
     int sockfd, client_sockfd;
     socklen_t client_address_len;
@@ -212,8 +403,9 @@ int ListenAndResponse(int port)
     }
 
     close(sockfd);
-    return 0; 
+    return 0;
 }
+#endif
 
 int main(int argc, char **argv)
 {
@@ -222,13 +414,9 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    int port = atoi(argv[1]);
+    Daemon daemon(atoi(argv[1]));
 
-    vcs = new GitVCS;
-
-    ListenAndResponse(port);
-
-    delete vcs;
+    daemon.ListenAndResponse();
 
     return 0;
 }
