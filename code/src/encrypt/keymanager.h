@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include <openssl/rsa.h>
+
 #include <common/common.h>
 
 class KeyManager {
