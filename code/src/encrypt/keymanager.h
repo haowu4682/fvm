@@ -5,18 +5,37 @@
 
 #include <common/common.h>
 
-class GroupKeyManager {
+class KeyManager {
     public:
-        virtual String GetKeyFileName(const String &key_name);
+        KeyManager (const String &username)
+            : username(username) {}
 
-        virtual String GetKeyContent(const String &file_content);
+#if 0
+        KeyManager (const String &username,
+                const String &private_key,
+                const String &public_key)
+            : username(username), user_private_key(private_key),
+              user_public_key(public_key) {}
+#endif
+
+        void ReadPublicKeyFromFile(const String &filename);
+
+        void ReadPrivateKeyFromFile(const String &filename);
+
+        virtual String GetGroupKeyFileName(const String &group_name);
+
+        // Decryption of Group Key Value, using private key.
+        virtual String GetGroupKeyContent(const String &file_content);
+
+        // Encryption of Group Key Value, using public key.
+        virtual String GetNewGroupKeyFileContent(const String &key_content);
 
     protected:
         String username;
 
     private:
-        String user_private_key;
-        String user_public_key;
+        RSA *user_private_key;
+        RSA *user_public_key;
 };
 
 
