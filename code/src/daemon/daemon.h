@@ -8,10 +8,11 @@
 #include <libssh/libssh.h>
 
 #include <common/common.h>
+#include <daemon/verifier.h>
 
 class Daemon {
     public:
-        Daemon(int port) : port(port) {}
+        Daemon(int port, Verifier* verifier) : port(port), verifier(verifier) {}
 //            vcs = new GitVCS;
 //        }
 
@@ -20,23 +21,25 @@ class Daemon {
 //        }
 //
 
-#if 0
         void ReadPublicKeyMap(std::istream &in);
         void WritePublicKeyMap(std::ostream &out) const;
-#endif
 
         int ListenAndResponse();
 
     protected:
         void ResponseForClient(ssh_session session, ssh_channel channel);
         int ResponseForPush();
+        bool CheckAuthentication(ssh_message message);
 
     private:
         int port;
 //        GitVCS *vcs;
 
-        // The public key list
-        //Map<String, String> public_key_map_;
+        // The public key list, which maps user name to public key
+        Map<String, ssh_key> public_key_map_;
+
+        // The verifier used to verify "push" request
+        Verifier *verifier;
 };
 
 #if 0

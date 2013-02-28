@@ -26,15 +26,37 @@
 #define KEYS_FOLDER "/etc/ssh/"
 #endif // KEYS_FOLDER
 
-#if 0
 void Daemon::ReadPublicKeyMap(std::istream& in) {
-    // TODO Implement
+    String username, key_string;
+
+    Vector<String> key_map_str_array;
+    readline(in, key_map_str_array);
+
+    for (int i = 0; i != key_map_str_array.size(); ++i) {
+        String& str = key_map_str_array[i];
+        int end_index = str.find_first_of(' ');
+
+        username = str.substr(0, end_index);
+        key_string = str.substr(end_index + 1/*, npos*/);
+
+        ssh_key key = ssh_key_new();
+        ssh_pki_import_pubkey_base64(key_string.c_str(), SSH_KEYTYPE_RSA, &key);
+
+        public_key_map_[username] = key;
+    }
 }
 
 void Daemon::WritePublicKeyMap(std::ostream& out) const {
-    // TODO Implement
+    // XXX Magic Number
+    char *buf = new char[10000];
+    for (Map<String, ssh_key>::const_iterator it = public_key_map_.begin();
+            it != public_key_map_.end(); ++it) {
+        ssh_pki_export_pubkey_base64(it->second, &buf);
+
+        out << it->first << ' ' << buf << std::endl;
+    }
+    delete buf;
 }
-#endif
 
 #if 0
 //// These are old design code, we keep them here in case we will use them
@@ -107,8 +129,34 @@ String BranchManagerAdv::operator() (const String& pathname)
 
 void Daemon::ResponseForClient(ssh_session session, ssh_channel channel)
 {
-    // TODO re-implement this using SSH channel
-    // TODO: Execute the command according to the command string
+    size_t size;
+    char buffer[PATH_MAX + 100];
+
+    // Read in the command from the client
+    size = ssh_channel_read(channel, buffer, PATH_MAX + 100, false);
+
+    // Parse the command
+    String buffer_str(buffer, size);
+    Vector<String> command_args;
+
+    LOG("Recieve Command: %s", buffer_str.c_str());
+
+    split(buffer_str, " ", command_args);
+
+    // Execute the command according to the command string
+    if (command_args[0] == "PUSH") {
+        // TODO implement
+        // Step 1: Read in and extract the pack
+        // Step 2: For each update, call the verifier to verify
+        LOG("Unimplemented command: %s", command_args[0].c_str());
+    } else {
+        // Undefined command, do nothing
+        LOG("Undefined command: %s", command_args[0].c_str());
+    }
+
+    // Finalize the channel
+    ssh_channel_close(channel);
+    ssh_disconnect(session);
 }
 
 #if 0
@@ -201,10 +249,18 @@ void Daemon::ResponseForClient(int sockfd)
 }
 #endif
 
-// TODO Finish implementation
-bool CheckAuthentication(ssh_message message)
+bool Daemon::CheckAuthentication(ssh_message message)
 {
-    return false;
+    const char* username = ssh_message_auth_user(message);
+    ssh_key message_key = ssh_message_auth_pubkey(message);
+
+    ssh_key database_key = public_key_map_[username];
+
+    if (ssh_key_cmp(message_key, database_key, SSH_KEY_CMP_PUBLIC)) {
+        return false;
+    } else {
+        return true;
+    }
 }
 
 int Daemon::ListenAndResponse()
@@ -279,7 +335,7 @@ int Daemon::ListenAndResponse()
                         // Since public key is required in the system, we also
                         // require the user to use public key authentication here.
                         case SSH_AUTH_METHOD_PUBLICKEY:
-                            // TODO check public key authentication here.
+                            // check public key authentication here.
                             if (CheckAuthentication(message)) {
                                 auth = true;
                                 ssh_message_auth_reply_success(message, 0);
@@ -414,9 +470,14 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    Daemon daemon(atoi(argv[1]));
+    EncryptionManager *encrypt_manager = new StandardEncryptionManager;
+    Verifier verifier(encrypt_manager);
+
+    Daemon daemon(atoi(argv[1]), &verifier);
 
     daemon.ListenAndResponse();
+
+    delete encrypt_manager;
 
     return 0;
 }
