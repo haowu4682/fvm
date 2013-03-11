@@ -6,9 +6,10 @@
 #include <map>
 
 #include <libssh/libssh.h>
+#include <git2.h>
 
 #include <common/common.h>
-#include <daemon/verifier.h>
+#include <vcs/verifier.h>
 
 class Daemon {
     public:
@@ -28,7 +29,7 @@ class Daemon {
 
     protected:
         void ResponseForClient(ssh_session session, ssh_channel channel);
-        int ResponseForPush();
+        String ResponseForPush(const Vector<String>& args, ssh_channel channel);
         bool CheckAuthentication(ssh_message message);
 
     private:

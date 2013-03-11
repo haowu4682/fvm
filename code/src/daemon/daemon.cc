@@ -127,8 +127,53 @@ String BranchManagerAdv::operator() (const String& pathname)
 }
 #endif
 
+String Daemon::ResponseForPush(const Vector<String>& command_args,
+        ssh_channel channel)
+{
+    LOG("Unimplemented command: %s", command_args[0].c_str());
+
+    int rc;
+    String ret_str;
+    char *buf;
+
+    // Step 1: Read in the pack
+    int size;
+    rc = ssh_channel_read(channel, &size, sizeof(int), false);
+    if (rc < 0) {
+        LOG("Unexpected size %d, ret = %d", size, rc);
+        goto error;
+    }
+
+    // TODO Restrict package size not to be too large
+    buf = new char[size];
+
+    rc = ssh_channel_read(channel, buf, sizeof(buf), false);
+    if (rc < size) {
+        LOG("Failed to read in the entire package! read %d bytes, required %d bytes",
+                rc, size);
+        goto error2;
+    }
+
+    // Step 2: Call the verifier to verify the pack
+    if (verifier == NULL) {
+        LOG("No verifier found!");
+        goto error2;
+    } else {
+        ret_str = verifier->VerifyPackage(buf, size);
+    }
+
+    // Step 3: Return the response
+    return ret_str;
+
+error2:
+    delete buf;
+error:
+    return "";
+}
+
 void Daemon::ResponseForClient(ssh_session session, ssh_channel channel)
 {
+    int rc;
     size_t size;
     char buffer[PATH_MAX + 100];
 
@@ -145,10 +190,12 @@ void Daemon::ResponseForClient(ssh_session session, ssh_channel channel)
 
     // Execute the command according to the command string
     if (command_args[0] == "PUSH") {
-        // TODO implement
-        // Step 1: Read in and extract the pack
-        // Step 2: For each update, call the verifier to verify
-        LOG("Unimplemented command: %s", command_args[0].c_str());
+        String ret_str = ResponseForPush(command_args, channel);
+
+        size = ssh_channel_write(channel, ret_str.c_str(), ret_str.size());
+        if (size != ret_str.size()) {
+            LOG("Failed to send return message: %s", ret_str.c_str());
+        }
     } else {
         // Undefined command, do nothing
         LOG("Undefined command: %s", command_args[0].c_str());
@@ -162,8 +209,8 @@ void Daemon::ResponseForClient(ssh_session session, ssh_channel channel)
 #if 0
 void Daemon::ResponseForClient(int sockfd)
 {
-//// These are old design code, we keep them here in case we will use them
-//// later.
+    //// These are old design code, we keep them here in case we will use them
+    //// later.
     size_t size;
     char buffer[PATH_MAX + 100];
 
