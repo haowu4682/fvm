@@ -1,4 +1,6 @@
 
+#include <vector>
+
 #include <vcs/verifier.h>
 
 bool Verifier::VerifyTree(git_tree *tree)

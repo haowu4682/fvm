@@ -3,6 +3,8 @@
 
 #include <git2.h>
 
+#include <common/common.h>
+
 #include <encrypt/encryptionmanager.h>
 #include <encrypt/keymanager.h>
 
