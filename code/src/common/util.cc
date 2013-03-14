@@ -63,3 +63,26 @@ bool IsPrefix(const String& source, const String& target)
     }
 }
 
+// Check whether a node in a DAG is an ancestor of another node using BFS
+// "Is A an ancestor of B?"
+template<typename Node>
+bool IsAncestor(Node* A, Node* B, Vector<Node*> (*GetParentList) (Node*))
+{
+    // Step 1: Check if A == B
+    if (A == B) {
+        return true;
+    }
+
+    // Step 2: Get parent list
+    Vector<Node*> B_parent_list = GetParentList(B);
+
+    // Step 3: Recursively call the function to check for parent's ancestancy
+    for (int i = 0; i < B_parent_list.size(); ++i) {
+        if (IsAncestor(A, B_parent_list[i], GetParentList)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+

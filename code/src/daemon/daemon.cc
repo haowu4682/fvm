@@ -518,13 +518,18 @@ int main(int argc, char **argv)
     }
 
     EncryptionManager *encrypt_manager = new StandardEncryptionManager;
-    Verifier verifier(encrypt_manager);
+    // TODO Use actual user name
+    KeyManager *key_manager = new KeyManager("haowu");
+    AccessManager *access_manager = new AccessManager(key_manager);
+    Verifier verifier(access_manager);
 
     Daemon daemon(atoi(argv[1]), &verifier);
 
     daemon.ListenAndResponse();
 
     delete encrypt_manager;
+    delete key_manager;
+    delete access_manager;
 
     return 0;
 }

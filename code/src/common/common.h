@@ -17,6 +17,8 @@
 #define Vector std::vector
 #define String std::string
 #define Set std::set
+#define Stack std::stack
+#define Deque std::deque
 #define Map std::map
 #define MultiMap std::multimap
 #define Pair std::pair

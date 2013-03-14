@@ -25,5 +25,11 @@ int split(const String& str, // The source string
 // Is source a prefix of the target?
 bool IsPrefix(const String& source, const String& target);
 
+// Check whether a node in a DAG is an ancestor of another node using BFS
+// "Is A an ancestor of B?"
+// @param GetParentList The function to retrieve all the parents of a node.
+template<typename Node>
+bool IsAncestor(Node* A, Node* B, Vector<Node*> (*GetParentList) (Node*));
+
 #endif // COMMON_UTIL_H__
 
