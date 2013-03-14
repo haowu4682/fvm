@@ -120,24 +120,60 @@ size_t Verifier::RetrieveCommitList(Deque<git_commit*> &commit_list,
 bool Verifier::VerifyTree(git_tree *old_tree, git_tree *new_tree,
         git_repository *repo)
 {
+    assert(old_tree != NULL);
+    assert(repo != NULL);
+
+    int rc;
+
     // For each tree entry in old tree
     for (size_t i = 0; i < git_tree_entrycount(old_tree); ++i) {
         // If the tree entry shall not be written by the user
         const git_tree_entry* entry = git_tree_entry_byindex(old_tree, i);
         GitTreeEntryName entry_name(git_tree_entry_name(entry));
 
+        const git_tree_entry* new_entry;
+        if (new_tree == NULL) {
+            new_entry = NULL;
+        } else {
+            new_entry = git_tree_entry_byname(new_tree,
+                git_tree_entry_name(entry));
+        }
+
         if (!access_manager_->IsMember(entry_name.user, entry_name.group,
                     old_tree, repo)) {
-            // TODO Check if the tree entry remain unchanged
+            // Check if the tree entry remain unchanged
+            if (new_entry == NULL || !git_oid_cmp(git_tree_entry_id(entry),
+                        git_tree_entry_id(entry))) {
+                return false;
+            }
         }
 
         // Verify child trees recursively
         if (git_tree_entry_type(entry) == GIT_OBJ_TREE) {
-            //git_tree *old_child_tree
-            //git_tree *new_child_tree
-            //TODO
+            git_tree *old_child_tree, *new_child_tree;
+
+            rc = git_tree_lookup(&old_child_tree, repo, git_tree_entry_id(entry));
+            if (rc < 0) {
+                LOG("unknown error trying to find old tree!");
+                continue;
+            }
+
+            if (new_entry == NULL) {
+                new_child_tree = NULL;
+            } else {
+                rc = git_tree_lookup(&new_child_tree, repo, git_tree_entry_id(new_entry));
+                if (rc < 0) {
+                    new_child_tree = NULL;
+                }
+            }
+
+            if (!VerifyTree(old_child_tree, new_child_tree, repo)) {
+                return false;
+            }
         }
     }
+
+    return true;
 }
 
 bool Verifier::VerifyCommit(git_commit *old_commit, git_commit *new_commit,
