@@ -260,7 +260,7 @@ String Verifier::VerifyPush(git_push *push)
             flag = VerifyCommit(*parent_it, *child_it, repo);
             if (!flag) {
                 LOG("child commit violates permission!");
-                str += ref_spec->lref + ':' + ref_spec->rref + ':' + '0';
+                ret_str = ret_str + ref_spec->lref + ':' + ref_spec->rref + ':' + '0';
                 continue;
             }
 
@@ -268,7 +268,7 @@ String Verifier::VerifyPush(git_push *push)
         }
 
         // Step 2.4 Return SUCCESS for the refspec and update the reference.
-        str += ref_spec->lref + ':' + ref_spec->rref + ':' + '1';
+        ret_str = ret_str + ref_spec->lref + ':' + ref_spec->rref + ':' + '1';
     }
 
     return ret_str;

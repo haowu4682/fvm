@@ -28,6 +28,28 @@ struct GitTreeEntryName {
     GitTreeEntryName(const String& name, const struct stat* stat);
 };
 
+class FVMTransport : public git_transport {
+    public:
+        FVMTransport();
+
+        int Connect(const char *url,
+                git_cred_acquire_cb cred_acquire_cb,
+                void *cred_acquire_payload,
+                int direction,
+                int flags);
+
+        int IsConnected();
+
+        int Push(git_push *push);
+
+        int Close();
+
+        static void Free(struct git_transport *transport);
+
+    private:
+        bool is_connected_;
+};
+
 // The Interface for a version control system
 class GitVCS : public VersionControlSystem {
     public:
@@ -79,7 +101,7 @@ class GitVCS : public VersionControlSystem {
                 const String& head_commit_id);
 
         // Create a push object, and push it to remote side
-        virtual int SendPush(const String& repo_pathname);
+        virtual int SendPush(const String& repo_pathname, const String& remote_name);
 
         // Recieve a push object, and write the objects into the repository
         static int ReceivePush(git_push* push);

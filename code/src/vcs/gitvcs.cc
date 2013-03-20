@@ -1436,14 +1436,49 @@ int GitVCS::BranchCreate(const String& repo_name,
     return 0;
 }
 
-int GitVCS::SendPush(const String& repo_pathname)
+int GitVCS::SendPush(const String& repo_pathname, const String& remote_name)
 {
-    // TODO Implement
+    int rc;
     git_push *push;
+    git_repository *repo;
+    git_remote *remote;
 
-    // Step 1: Pack all objects
-    // Step 2: Add all refspec
-    // Step 3: Send the push object
+    // Step 1: Initialize repo and remote
+    rc = git_repository_open(&repo, repo_pathname.c_str());
+    if (rc < 0) {
+        LOG("Failure: Cannot open repository.");
+        return rc;
+    }
+
+    rc = git_remote_load(&remote, repo, remote_name.c_str());
+    if (rc < 0) {
+        LOG("Failure: Cannot load remote config.");
+        return rc;
+    }
+
+    rc = git_remote_set_transport(remote, new FVMTransport());
+    if (rc < 0) {
+        LOG("Failure: Cannot load remote config.");
+        return rc;
+    }
+
+    // Step 2: Send the push object
+    rc = git_push_new(&push, remote);
+    if (rc < 0) {
+        LOG("Failure: Cannot initialize the push object.");
+        return rc;
+    }
+
+    rc = git_push_finish(push);
+    if (rc < 0) {
+        LOG("Failure: Cannot finish the push object.");
+        return rc;
+    }
+
+    git_push_free(push);
+    git_remote_free(remote);
+    git_repository_free(repo);
+
     return 0;
 }
 
@@ -1451,9 +1486,11 @@ int GitVCS::ReceivePush(git_push *push)
 {
     git_repository *repo = git_push_repo(push);
 
-    // TODO Implement
-    // Step 1: unpack all objects
+    // Step 1: retrieve the pack
+    // git_backbuilder* packbuilder = git_push_packbuilder
     // Step 2: write all objects
+    // git_pack_builder_unpack(packbuilder)
+
     return 0;
 }
 
