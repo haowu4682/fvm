@@ -78,6 +78,12 @@ class GitVCS : public VersionControlSystem {
                 const String& branch_name,
                 const String& head_commit_id);
 
+        // Create a push object, and push it to remote side
+        virtual int SendPush(const String& repo_pathname);
+
+        // Recieve a push object, and write the objects into the repository
+        static int ReceivePush(git_push* push);
+
     private:
         String username_;
         String user_email_;

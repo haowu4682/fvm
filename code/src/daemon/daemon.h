@@ -41,6 +41,9 @@ class Daemon {
 
         // The verifier used to verify "push" request
         Verifier *verifier;
+
+        // The Git VCS backend
+        //GitVCS *vcs;
 };
 
 #if 0

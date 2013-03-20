@@ -424,7 +424,6 @@ int Daemon::ListenAndResponse()
             continue;
         }
 
-        // TODO Open the channel
         do {
             message = ssh_message_get(session);
             if (!message) {

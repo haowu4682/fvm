@@ -197,10 +197,11 @@ bool Verifier::VerifyCommit(git_commit *old_commit, git_commit *new_commit,
     return VerifyTree(old_tree, new_tree, repo);
 }
 
-void Verifier::VerifyPush(git_push *push)
+String Verifier::VerifyPush(git_push *push)
 {
     int rc;
     bool flag;
+    String ret_str;
 
     git_repository *repo;
     git_reference *old_ref, *new_ref;
@@ -259,6 +260,7 @@ void Verifier::VerifyPush(git_push *push)
             flag = VerifyCommit(*parent_it, *child_it, repo);
             if (!flag) {
                 LOG("child commit violates permission!");
+                str += ref_spec->lref + ':' + ref_spec->rref + ':' + '0';
                 continue;
             }
 
@@ -266,13 +268,28 @@ void Verifier::VerifyPush(git_push *push)
         }
 
         // Step 2.4 Return SUCCESS for the refspec and update the reference.
-        // TODO implement
+        str += ref_spec->lref + ':' + ref_spec->rref + ':' + '1';
     }
+
+    return ret_str;
 }
 
 String Verifier::VerifyPackage(const char* buf, size_t size)
 {
-    // TODO Implement
-    return "";
+    int rc;
+    git_push* push;
+
+    rc = git_push_frombuffer(&push, buf, size);
+    if (rc < 0) {
+        LOG("Cannot reconstruct the push object.");
+        // TODO Check if this is correct behavior.
+        return "";
+    }
+
+    GitVCS::ReceivePush(push);
+
+    String str = VerifyPush(push);
+
+    return str;
 }
 

@@ -43,7 +43,7 @@ class Verifier {
                 git_repository *repo);
 
         // Verify a push object
-        void VerifyPush(git_push *push/*,  git_repository *repo */ );
+        String VerifyPush(git_push *push/*,  git_repository *repo */ );
 
         // Return a list of commit id from old ref to new ref (both included).
         // @param commit_id_list The list of commit id in the path. empty if

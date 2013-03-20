@@ -1436,3 +1436,24 @@ int GitVCS::BranchCreate(const String& repo_name,
     return 0;
 }
 
+int GitVCS::SendPush(const String& repo_pathname)
+{
+    // TODO Implement
+    git_push *push;
+
+    // Step 1: Pack all objects
+    // Step 2: Add all refspec
+    // Step 3: Send the push object
+    return 0;
+}
+
+int GitVCS::ReceivePush(git_push *push)
+{
+    git_repository *repo = git_push_repo(push);
+
+    // TODO Implement
+    // Step 1: unpack all objects
+    // Step 2: write all objects
+    return 0;
+}
+
