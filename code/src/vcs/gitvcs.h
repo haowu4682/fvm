@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 #include <vector>
 
+#include <libssh/libssh.h>
+
 #include <common/accessinfo.h>
 #include <common/common.h>
 #include <vcs/vcs.h>
@@ -48,6 +50,11 @@ class FVMTransport : public git_transport {
 
     private:
         bool is_connected_;
+
+        int port;
+
+        ssh_session session;
+        ssh_channel channel;
 };
 
 // The Interface for a version control system

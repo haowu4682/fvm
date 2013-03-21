@@ -19,7 +19,57 @@ int FVMTransport::Connect(const char *url,
         int direction,
         int flags)
 {
-    // XXX Unimplemented
+    int rc;
+    String username;
+    // TODO Retract user name
+
+    // Initialize session
+    session = ssh_new();
+    if (session == NULL) {
+        return -1;
+    }
+
+    // Set options
+    // TODO extract host and port from url
+    ssh_options_set(session, SSH_OPTIONS_HOST, "localhost");
+    ssh_options_set(session, SSH_OPTIONS_PORT, &port);
+
+    // Connect to the server
+    rc = ssh_connect(session);
+    if (rc != SSH_OK) {
+        LOG("Error connecting to localhost: %s\n",
+                ssh_get_error(session));
+        exit(-1);
+    }
+
+    // Authenticate
+    // FVM requires the user to use PUBLIC_KEY authentication
+    rc = ssh_userauth_publickey_auto(session, username.c_str(), NULL);
+    if (rc == SSH_AUTH_ERROR) {
+        LOG("Authentication failed: %s\n",
+                ssh_get_error(session));
+        return rc;
+    } else if (rc == SSH_AUTH_DENIED || rc == SSH_AUTH_PARTIAL) {
+        LOG("Authentication failed: %s\n",
+                ssh_get_error(session));
+        return rc;
+    }
+
+    // Open channel
+    channel = ssh_channel_new(session);
+    if (channel == NULL) {
+        return SSH_ERROR;
+    }
+
+    rc = ssh_channel_open_session(channel);
+    if (rc != SSH_OK) {
+        ssh_channel_free(channel);
+        return rc;
+    }
+
+    // Finish up setting attributes
+    is_connected_ = true;
+
     return 0;
 }
 
@@ -89,7 +139,12 @@ void Cancel(struct git_transport *transport)
  * connection to the remote end. */
 int FVMTransport::Close()
 {
-    // XXX Unimplemented
+    if (is_connected_) {
+        is_connected_ = false;
+        ssh_channel_free(channel);
+        ssh_free(session);
+    }
+
     return 0;
 }
 
