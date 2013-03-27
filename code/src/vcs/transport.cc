@@ -87,7 +87,23 @@ int Ls(struct git_transport *transport,
 /* Executes the push whose context is in the git_push object. */
 int FVMTransport::Push(git_push *push)
 {
-    // XXX Unimplemented
+    // XXX magic number
+    char buf[10000];
+
+    size_t size = git_push_tobuffer(buf, 10000, push);
+    int rc;
+
+    if (size < 0) {
+        LOG("retrieving push info fails!");
+        return -1;
+    }
+
+    rc = ssh_channel_write(channel, buf, size);
+    if (rc < 0) {
+        LOG("sending push info through SSH channel fails!");
+        return -1;
+    }
+
     return 0;
 }
 

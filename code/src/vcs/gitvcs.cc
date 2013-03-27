@@ -1488,6 +1488,7 @@ int GitVCS::ReceivePush(git_push *push)
 
     // Step 1: retrieve the pack
     // git_backbuilder* packbuilder = git_push_packbuilder
+
     // Step 2: write all objects
     // git_pack_builder_unpack(packbuilder)
 
