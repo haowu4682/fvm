@@ -12,7 +12,9 @@
 
 #include <common/accessinfo.h>
 #include <common/common.h>
+#include <vcs/access.h>
 #include <vcs/vcs.h>
+#include <vcs/verifier.h>
 
 struct GitTreeEntryName {
     mode_t mode;
@@ -116,8 +118,14 @@ class GitVCS : public VersionControlSystem {
     private:
         String username_;
         String user_email_;
-        // TODO Make access list position configurable
         String access_list_filename_;
+
+        // Encryption stuff
+        // TODO Initilize them
+        EncryptionManager *encryption_manager_;
+        //KeyManager *key_manager_;
+        Verifier *verifier_;
+        AccessManager *access_manager_;
 
         // Auxilary functions
         int ReadAccessList(
@@ -134,6 +142,43 @@ class GitVCS : public VersionControlSystem {
                 git_repository* repo,
                 const AccessList& access_list,
                 git_tree* old_root_tree);
+
+        int GitObjectWrite(git_repository *repo,
+                const git_oid *root_oid,
+                const String& destination,
+                const String& username,
+                AccessList &access_list);
+
+        int GitBlobWrite(git_repository *repo, git_blob *blob,
+                const String& destination, const GitTreeEntryName &name);
+
+        int GitTreeWrite(git_repository *repo, git_tree *tree,
+                const String& destination,
+                const String& username, AccessList &list);
+
+        friend int GitTreeWriteCallback(const char *root,
+                const git_tree_entry *entry,
+                void *payload);
+
+        int CreateObjectRecursive(
+                // Output
+                git_oid *source_oid,
+                struct stat *source_stat,
+                AccessList *new_access_list,
+
+                // Input
+                git_repository *repo,
+                const String& username,
+                const String& branch_name,
+                const String& source_path,
+                const String& relative_path,
+                const git_oid *old_object_oid,
+                //GitTreeEntryName *old_tree_entry_name,
+                AccessList *old_access_list,
+
+                // Operator
+                IsIncludeOperator &IsIncluded,
+                BranchOperator &GetBranch);
 };
 
 #endif // VCS_GITVCS_H_

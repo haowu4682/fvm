@@ -33,6 +33,13 @@ class AccessManager {
         bool IsMember(const String& username, const String& groupname,
                 const String& root_path);
 
+        // Retrieve the group key
+        // @param username The user's name.
+        // @param groupname The group's name.
+        // @return The string containing the group key.
+        virtual String GetGroupKey(const String& username,
+                const String& groupname, const String& root_path);
+
         // Get the group key path relative to the repository root
         // @param username The user's name
         // @param groupname The group's name

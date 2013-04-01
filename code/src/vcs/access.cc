@@ -1,4 +1,5 @@
 
+#include <fstream>
 #include <string>
 
 #include <vcs/access.h>
@@ -58,6 +59,25 @@ bool AccessManager::IsMember(const String& username, const String& groupname,
     }
 
     return true;
+}
+
+String AccessManager::GetGroupKey(const String& username,
+        const String& groupname, const String& root_path)
+{
+    assert(key_manager_ != NULL);
+
+    int rc;
+    String group_key_filename = GetGroupKeyFilename(username, groupname);
+    String group_key_dir = GetGroupKeyDir();
+    String absolute_key_path = root_path + group_key_dir + group_key_filename;
+    std::ifstream key_fin(absolute_key_path.c_str());
+
+    char key_encrypted_content[MAX_KEY_SIZE];
+    key_fin.read(key_encrypted_content, MAX_KEY_SIZE);
+
+    String key_content = key_manager_->GetGroupKeyContent(key_encrypted_content);
+
+    return key_content;
 }
 
 String AccessManager::GetGroupKeyFilename(const String& username,

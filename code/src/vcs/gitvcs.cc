@@ -8,6 +8,7 @@
 #include <grp.h>
 #include <iostream>
 #include <map>
+#include <openssl/aes.h>
 #include <pwd.h>
 #include <sstream>
 #include <string>
@@ -449,15 +450,26 @@ int GitTreeSearch(git_oid *relative_oid,
     return 0;
 }
 
-int GitBlobWrite(git_repository *repo, git_blob *blob, const String& destination,
-        const GitTreeEntryName &name)
+int GitVCS::GitBlobWrite(git_repository *repo, git_blob *blob,
+        const String& destination, const GitTreeEntryName &name)
 {
+    // Step 1: Read in blob content
     const void *buf = git_blob_rawcontent(blob);
     size_t size = git_blob_rawsize(blob);
 
     DBG("size = %ld", size);
     DBG("content = %s", (char *)buf);
 
+    // Step 2: Find group key
+    String group_key = access_manager_->GetGroupKey(name.user, name.group,
+            destination);
+
+    // Step 3: Decrypt
+    char *new_buf = new char[size + AES_BLOCK_SIZE];
+    // TODO Specify IV
+    encryption_manager_->Decrypt(new_buf, (const char *)buf, size, group_key, "");
+
+    // Step 4: Write the content
     FILE *file = fopen(destination.c_str(), "w");
     if (file == NULL) {
         LOG("Cannot open file to write: %s", destination.c_str());
@@ -466,6 +478,8 @@ int GitBlobWrite(git_repository *repo, git_blob *blob, const String& destination
     fwrite((char *)buf, size, 1, file);
     fclose(file);
     name.WriteToFile(destination);
+
+    delete new_buf;
 
     return 0;
 }
@@ -476,6 +490,7 @@ struct GitTreeWriteCallbackPayload {
 //    GitTreeEntryName info;
     AccessList *access_list;
     const String *username;
+    GitVCS *vcs;
 };
 
 // TODO Remove replication
@@ -496,6 +511,7 @@ String GetRealPath(const char *root)
     return os.str();
 }
 
+// TODO decrypt
 int GitTreeWriteCallback(const char *root,
         const git_tree_entry *entry,
         void *payload)
@@ -543,7 +559,8 @@ int GitTreeWriteCallback(const char *root,
             if (rc < 0) {
                 LOG("Error in git data structure: blob is not found.");
             }
-            GitBlobWrite(data->repo, entry_blob, file_name, tree_entry_name);
+            data->vcs->GitBlobWrite(data->repo, entry_blob, file_name,
+                    tree_entry_name);
             break;
 
         default:
@@ -553,7 +570,8 @@ int GitTreeWriteCallback(const char *root,
     return 0;
 }
 
-int GitTreeWrite(git_repository *repo, git_tree *tree, const String& destination,
+int GitVCS::GitTreeWrite(git_repository *repo, git_tree *tree,
+        const String& destination,
         const String& username, AccessList &list)
 {
     int rc;
@@ -563,6 +581,7 @@ int GitTreeWrite(git_repository *repo, git_tree *tree, const String& destination
     data.destination = &destination;
     data.username = &username;
     data.access_list = &list;
+    data.vcs = this;
 
     rc = git_tree_walk(tree, GIT_TREEWALK_PRE, GitTreeWriteCallback, &data);
     if (rc < 0) {
@@ -573,7 +592,7 @@ int GitTreeWrite(git_repository *repo, git_tree *tree, const String& destination
     return 0;
 }
 
-int GitObjectWrite(git_repository *repo,
+int GitVCS::GitObjectWrite(git_repository *repo,
         const git_oid *root_oid,
         const String& destination,
         const String& username,
@@ -721,7 +740,7 @@ void UpdateAccessList(AccessList& list, GitTreeEntryName& entry_name)
 //         1 Object not created because it is not included, or not with the name
 //           of the branch, or has no permission.
 //         <0 Error code.
-int CreateObjectRecursive(
+int GitVCS::CreateObjectRecursive(
         // Output
         git_oid *source_oid,
         struct stat *source_stat,
@@ -788,8 +807,24 @@ int CreateObjectRecursive(
         }
 #endif
 
+        char *file_content;
+        char *file_encrypted_content;
+        String key_content;
+        size_t file_content_size, file_encrypted_content_size;
+
+        // NOTE We do not need to specify a correct file name here because we
+        // only need the username and groupname.
+        GitTreeEntryName name("", source_stat);
+        String group_key = access_manager_->GetGroupKey(name.user, name.group,
+                source_path);
+
+        // TODO: Fill in IV.
+        encryption_manager_->Encrypt(file_encrypted_content, file_content,
+                file_content_size, key_content, "");
+
         // Create a blob for the file
-        rc = git_blob_create_fromdisk(source_oid, repo, source_path.c_str());
+        rc = git_blob_create_frombuffer(source_oid, repo, file_encrypted_content,
+                file_encrypted_content_size);
         if (rc < 0) {
             LOG("Cannot create a blob for file: %s", source_path.c_str());
             return rc;

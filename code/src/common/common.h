@@ -12,6 +12,7 @@
 
 // Constant definition
 #define kNanosecondsToSeconds 1e-9
+#define MAX_KEY_SIZE 4096
 
 // Type definition
 #define Vector std::vector
