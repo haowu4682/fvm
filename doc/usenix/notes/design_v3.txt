@@ -1,0 +1,338 @@
+1. Motivation
+
+The previous design requires a trusted server to manage all access control
+stuff. It forces the system to use a server-client model like CVS and SVN.
+So the system could not have many benifits in DVCS(distributed version control
+system.) For example, in DVCS each user has a stand-alone copy of the repository
+which can work on its own, but in server-client model a user cannot make commit
+and checkout when the server losts connection. Involving the server also makes
+operations slow due to network latency. Also users will lose data when a server
+fails since the repository is only stored on the server side.
+
+However it is difficult to keep access control in DVCS. In a DVCS, each user
+maintains a *clone* of the original repository. Such a clone contains all the
+files in a repository, which makes a user able to read every file in a
+repository. This behavior is not what users want for access control: it means
+that a user cannot restrict another user from READING a file. Also since the
+user has a standalone copy of the repository, he/she could modify any files in
+that repository and makes a commit anyway. Although the original repository
+could reject updates without WRITE permission, most systems do not do that
+because it is difficult to check that, since the system need to go over the
+commit trees to check permissions for each file, which is very slow especially
+when there are a lot of updates to be pushed.
+
+We can solve the problem by using encryption. Encryption can be used to solve
+the READING control issue, along with the "access control list" in previous
+design. Since we can only encrypt/decrypt the CHANGED files in each checkout and
+commit, the time cost should be feasible.
+
+However encryption can not prevent a user to WRITE to a file without permission,
+because the user can write any random data to a file even without an encryption
+key. To solve the issue we use a user side authenticator for every "push" to the
+remote repository. The authenticator will reject any "push" update which
+contains a violation of write premission (i.e. contains a commit which has a
+file different from its parent, and the user does not have the write
+permission of the file in its parent.)
+[This is not an ideal solution since it may take a lot of time to go through
+each commit tree to checkot]
+
+This design itself, though solving the write permission issue, is not
+consistent. The problem is that a user's commit is already a part of the commit
+history, yet it cannot be propogated to other cloned repositories. The reason is
+that the user makes an *illegal* commit, which should not be contained in the
+commit history. To prevent this situation from happening, \sys should not allow
+such a commit. However, a malicious user could still do this on his own side
+even if \sys does not allow him. So we are aiming at the following two
+properties instead:
+
+(1) For a benevolent user who always makes legal update, his repository should
+be consistent with other benevolent users. (The details will be in a later
+section.)
+
+(2) Any illegal update should not be contained in any benevolent user's
+repository.
+
+\sys will protect a benevolent user from making illegal update by using the
+"partial commit" idea proposed in design_v2.txt. The basic idea is that \sys
+will not include any change of files without write permission to a child commit.
+
+There are many benefits for the design. First is that it inherits the benefit of
+git. Since every copy is a *clone* of the original repository, an administrator
+can recover the repository from anyone's copy as long as he does not forget his
+key. Anyone could also work on his own copy of repository without connection to
+the network.
+
+
+2. Motivating Examples
+[Copied from design_v2.txt, no need to read again.]
+
+(1) The owner of a repository needs to restrict the ability of a new user to
+access histories of a repository
+
+    * A is a manager of a commercial software. B is a new employee to the company.
+    A wants B to work on user interface design, but does not want B to access old
+    version when B has not joined the group.
+
+    * A is a project owner. B is a visitor. A wants B to view the current state
+    of the project, but does not allow B to see the history.
+
+(2) The owner of a repository needs to restrict the ability of a user to only a
+subset of files.
+
+    * A is a computer owner, and B is a repairer. A wants B to access some
+    system files and their previous versions in order for B to repair it (B may
+    need to convert some files to their older versions to fix the problem), but
+    B is not allowed to see A's private files (e.g. private photos).
+
+(3) One user of a repository may want different part of the workdir go into
+different branches.
+
+    * A is a graduate student in a research project close to a paper deadline.
+    He has 2 major works: (1) writing the paper; (2) running experiments. The
+    update for the 2 works go into different branches. For example, all paper
+    updates go into "master" branch and all experiment updates go into
+    "experiment" branch. Using git he has to create 2 work dirs: one for the
+    paper and one for the experiment, otherwise he has to do "git checkout" very
+    frequently, which is not an efficient thing. When using \sys he can specify
+    that every file in "code/" in branch mode for the "experiment" branch, and
+    he only needs to maintain a single workdir for the project, which is easy to
+    manage.
+
+
+
+3. Design
+
+3.1 Data Model
+
+The basic data model is the same as git: the repository history is represented
+as a DAG of commits. Each commit has a commit tree, a tree contains subtrees and
+blobs. The commit objects are the same with those in git (i.e. without
+encryption), since they are used to keep the repository consistent. If a user
+cannot see a commit object, he/she cannot know whether his version is a
+fast-forward of the remote version, or vice versa.
+(Some one claims that git is not made to be consistent, refer to
+\url{http://bramcohen.livejournal.com/74462.html}
+for more details. However the idea of "consistency" in that document is
+different from the concept of consistency in distributed systems.)
+
+\iffalse
+    Any blob or tree object (a.k.a data object in the context) has two new
+    attributes: read_groups and write_groups. read_groups depicts the groups that
+    have the READ permission to the data object, and write_groups depicts the groups
+    that have the WRITE permission to the data object. The relation between the
+    groups is OR, which means that a user needs to belong to one of the groups to
+    have the permission.
+    [HW: Challenge: How to make a file belong to multiple groups?]
+\fi
+
+A group is a set of users. Any one of a group or an administrator could add a
+new user to a group, but only an administrator could remove a user from a group.
+An administrator is a speical person who can manage the group ownership.
+
+There is a special group called "admin", all administrators should belong to
+this group. An administrator should also belong to any other groups. Only the
+users in this group can have administrator's permission.
+
+Another special group is "all", which means all users has the access of the
+file. If a file belongs to the group, it does not need to be encrypted and
+\sys does not checkout permissions for the file.
+
+The access control list is a special tree object in each commit tree. Section
+3.3 will describe the detail of it.
+
+
+3.2 Encryption Model
+
+We provide a group (symmetric) key G for each group, and encrypt those files
+in that group with G. The repository contains the encrypted version of files.
+For each user who has the permission to access G, the repository contains an
+encrypted version of G called U(G), while U is the public key of the user.
+Every user with the permission can then use their private key to get the group
+key G, thus can be able to decrypt the files in group G. On the other hand, a
+user without permission cannot get the key G, thus cannot decrypt the file
+contents.
+
+When a user enters a group, the system only needs to create a new
+encrypted version U(G), which is very cheap. When a user exits a
+group, the system needs to create a new group key G' and encrypt the
+further files using G'. However the system does not need to re-encrypt
+files in old commits with G' because they already could be accessed by
+the user who exited the group and it does no harm not to re-encrypt
+those files.
+
+
+3.3 Access Control List (Encrypted Key Set)
+
+Unlike previous design in fvm.pdf, the access control list is not a file.
+It is a directories which contains all the encrypted version of group keys,
+i.e., all the U(G) values. The directory is contained in
+the root dir, thus is also managed by the encryption model. The directory itself
+belongs to group "all", while all the files in it belongs to group "admin". This
+makes sure two properties: (1) any one can add a key to the system; (2) only an
+administrator can remove a key from the system.
+
+In this model, (1) only a user in a group can add someone to a group; (2) only
+an administrator can remove someone from a group. (2) is trivial because only an
+administrator can remove or modify an encrypted key file, thus removing the
+a user from a group. (1) is true because only a user in a group knows the group
+key, thus able to create an encrypted group key for a new user.
+
+
+3.4 Write Verifier
+
+Since the encryption guarantees the access control permission when READING, \sys
+only needs to copy everything when the local side pulls from the remote side. So
+the only thing \sys needs to verify is that the local side does not violate
+WRITING permission when the local side pushes to the remote side.
+
+This requires work to verify that each commit during a push does not violate
+writing permission. Since a push consists of multiple commits, the ordering of
+checking the commits might cause a problem. It also might cause problems when
+the commits have dependencies, which is very common is practice. We consider a
+all-or-nothing policy for verifying each push. In this policy, \sys will reject
+the whole "push" request if it sees one violation of access control permission.
+Since \sys provides a method to prevent the user from making such a commit
+accidententally (see 3.5), a user trying to submit a commit without permission
+is a malicious user, thus it does no harm to reject all of his update.
+
+Note that this idea is similar to the "FVM Daemon" idea in previous design, but
+it is not a daemon -- the verifier is only called when a "push" request is
+submitted.
+
+Only having the verifier on the "push" side is a good thing because in a
+cooperative environment, the number of amount of "fetch" is much larger than the
+number of amount of "push", since a commit pushed by a single user is shared
+(pulled) by multiple people in a group.
+
+
+3.5 Checkout and Commit
+
+\sys uses the "partial checkout/commit" as in design_v2 here for any checkout
+and commit command. The "partial checkout" will filter out the files without
+READ permission and "partial commit" will filter out the files without WRITE
+permission (i.e. keep the version from the parent). More details can be seen in
+previous document and we do not repeat it here.
+
+The "partial commit" can prevent a user from unintentionally making a commit
+violating the WRITE permission. If a user always uses the partial checkout and
+partial commit here instead of the original git versions, the user will not
+make an illegal commit, thus will not be rejected by the write verifier.
+
+During the partial checkout \sys decrypts any file in the commit and during the
+partial commit \sys encrypts every file.
+
+
+
+3.6 Communication Protocol
+
+Section 3.4 requires us to use a communication protocol between local
+repository and remote repository other than what git provides. The reason is in
+original git, the local side directly write files to the remote side which
+cannot restrict the local side using write verifier, because it cannot prevent
+the client side from having WRITABLE permission to all the objects. The original
+git assumes that every user is trusted to perform any actions, which is not
+appropriate in the access control environment.
+
+The protocol in design_v2 could not be directed applied either. It was designed
+that each checkout/commit needs the participation of the FVM daemon, which is
+not what we want in section 3.4, where the verifier only works in each "push"
+request.
+
+We design a communication protocol which combines the design_v2 protocol and SSH
+protocol. In this protocol, an FVM Daemon is running on the machine of the
+remote side. A local side connects to the daemon using standard SSH protocol.
+After the secure connection, the daemon will perform request of the local side.
+
+Requests have two types: READING request (clone and fetch), and WRITING request
+(push). The daemon does not solve READING requests. Those requests will be
+through original git protocols. The only request the daemon deals with is the
+"push" request. On such a request, the daemon unpacked the request content,
+checks permission using the verifier, and then adds them to the repository if
+the verifier passes it.
+
+When we have this protocol, every copy of repository is only accessed by the
+owner, which means that another user cannot perform any action (clone, fetch,
+push, etc.) to the repository without the protocol. This guarantees that the
+access control is not violated.
+
+
+
+4. Implementation (Detail)
+
+4.1 Communication Protocol Detail
+
+Definition:
+Server: the machine which contains the parent repository
+Client: the machine which fetches and pushes from/to the server
+
+
+Protocol:
+Start-up process
+1. Client requests an SSH connection to the server
+2. The server answers the request
+3. Client requests an authentication to the server using PUBLICKEY_RSA
+4. The server authenticates it using the public key info in the repository.
+5. If authentication fails, the whole process aborts.
+Otherwise, [<username> is a common knowledge.] the client sends a channel open
+request for all upcoming communication.
+6. The server opens the channel.
+7. The client sends the request package starting with a word "PUSH".
+8. The protocol goes to the push process.
+
+Push process:
+// Packing and unpacking uses "git pack" utils
+1. Clients packs the following things and send to the server:
+    * all updated objects
+    * all updated references
+2. Upon receiving the pack, the server unpacks it.
+3. For each reference update the server does the follows:
+    (1) If the new reference is not a fast-forward of the original reference,
+    reject the update.
+    (2) If the new reference is a fast-forward of the original reference. The
+    original reference is commit A, the new reference is commit B. Then for each
+    commit from A to B, check that the user does not modify any files that the
+    user has no WRITE permission.
+    (3) If there is any violation in step (2), reject the update. Otherwise
+    accept the update.
+4. Pack all decision in step 3 and send it back to the user.
+
+Finalization process:
+1. Close the SSH channel
+2. Close the SSH session
+
+---------------------------------------------------------
+----------------- OBSOLETED TEXT BEGINS -----------------
+---------------------------------------------------------
+#3.6 Backend
+
+Even if \sys prevents a user from making an illegal "push", a malicious user can
+still invade the remote repository by using old git API or just low-level hack
+to the repository data structure. As a result, we need to make a customized
+backend storage to prevent such things from happening. The customized backend
+uses similar storage model with original git, except for that it stores the
+permission of objects in underlying object database differently.
+
+In the backend object database, all objects are READABLE by any users. However,
+each object is only WRITABLE by the owner of the repository. If another user
+wants to update the repository, he/she might go through the write verifier which
+checks the permisssions on behalf of the owner.
+
+---------------------------------------------------------
+----------------- OBSOLETED TEXT ENDS -----------------
+---------------------------------------------------------
+
+##### DO NOT CARE ABOUT THE FOLLOWING TEXT #####
+Consistency Model
+
+As \url{http://bramcohen.livejournal.com/74462.html} shows, git is not eventual
+consistent. However, the reason why git is not consistent is the confusion of
+semantics of merge which makes that the result depends on the ordering of
+merge/pull/push operations. We can relax the semantics of "merge". The merge
+operation is defined as follows:
+
+(1) If A is a fast-forward (offspring) of B, the merge result of A and B should
+be B.
+(2) If A and B are not fast-forward from 
+
+
+
