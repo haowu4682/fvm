@@ -23,8 +23,10 @@ RepoConfig *config = NULL;
 KeyManager *key_manager = NULL;
 AccessManager *access_manager = NULL;
 Verifier *verifier = NULL;
-AccessManager *access_manager = NULL;
 GitVCS *vcs = NULL;
+
+#define PUBLICKEY_PATH "~/.ssh/id_rsa.pub"
+#define PRIVATEKEY_PATH "~/.ssh/id_rsa"
 
 class AlwaysTrueIncludeOperator : public IsIncludeOperator {
     public:
@@ -236,13 +238,31 @@ int cmd_print_config(const Vector<String> &args)
 
 int cmd_add_user(const Vector<String> &args)
 {
-    // TODO Implement
+    // add-user username groupname root_path
+    if (args.size() < 4) {
+        printf("Usage: add-user username groupname root_path\n");
+        return -1;
+    }
+
+    String user_pubkey;
+
+    access_manager->AddGroupKey(username, args[1], args[2],
+            user_pubkey, args[3]);
+
     return 0;
 }
 
 int cmd_remove_user(const Vector<String> &args)
 {
-    // TODO Implement
+    // remove-user username groupname
+    // remove-user username groupname root_path
+    if (args.size() < 4) {
+        printf("Usage: remove-user username groupname root_path\n");
+        return -1;
+    }
+
+    access_manager->RemoveGroupKey(args[1], args[2], args[3]);
+
     return 0;
 }
 
@@ -348,11 +368,15 @@ int main(int argc, char **argv)
     access_manager = new AccessManager(key_manager);
     verifier = new Verifier(access_manager);
 
+    key_manager->ReadPublicKeyFromFile(PUBLICKEY_PATH);
+    key_manager->ReadPrivateKeyFromFile(PRIVATEKEY_PATH);
+
     // Setting up VCS
     vcs = new GitVCS();
     vcs->username(config->username());
     vcs->user_email(config->user_email());
     vcs->verifier(verifier);
+    vcs->access_manager(access_manager);
 
     while (rc != 1) {
         std::cout << "fvm> ";

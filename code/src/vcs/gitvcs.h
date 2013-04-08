@@ -72,6 +72,10 @@ class GitVCS : public VersionControlSystem {
         String username() { return username_; }
         String user_email() { return user_email_; }
 
+        void verifier(Verifier *value) { verifier_ = value;}
+        Verifier* verifier() { return verifier_; }
+        void access_manager(AccessManager *value) { access_manager_ = value;}
+        AccessManager* access_manager() { return access_manager_; }
 
         // Get the change list for a specific repository
         // Return the number of items to be included in the change list.
