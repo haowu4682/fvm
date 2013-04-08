@@ -1221,6 +1221,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     rc = git_branch_lookup(&head_ref, repo, branch_name.c_str(), GIT_BRANCH_LOCAL);
     if (rc < 0) {
         LOG("Failure: Cannot retrieve head reference");
+        return rc;
     }
 
     // Step 2.2 Find the oid

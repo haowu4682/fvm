@@ -40,6 +40,23 @@ class AccessManager {
         virtual String GetGroupKey(const String& username,
                 const String& groupname, const String& root_path);
 
+        // Add a group key
+        // @param username The user's name
+        // @param groupname The group's name
+        // @param user_pubkey The user's public key
+        // @return TRUE if the insertion succeeded, false otherwise
+        virtual bool AddGroupKey(const String& old_username,
+                const String& new_username, const String& groupname,
+                const String& user_pubkey, const String& root_path);
+
+        // Remove a group key
+        // @param username The user's name
+        // @param groupname The group's name
+        // @param user_pubkey The user's public key
+        // @return TRUE if the insertion succeeded, false otherwise
+        virtual bool RemoveGroupKey(const String& username,
+                const String& groupname, const String& root_path);
+
         // Get the group key path relative to the repository root
         // @param username The user's name
         // @param groupname The group's name

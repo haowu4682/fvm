@@ -10,16 +10,42 @@
 
 #include <fvmclient.h>
 #include <partialtracer.h>
-
 #include <common/common.h>
 #include <common/commands.h>
 #include <common/util.h>
-
 #include <config/config.h>
+#include <vcs/gitvcs.h>
 
+String username;
 FVMClient *client = NULL;
 PartialTracer *tracer = NULL;
 RepoConfig *config = NULL;
+KeyManager *key_manager = NULL;
+AccessManager *access_manager = NULL;
+Verifier *verifier = NULL;
+AccessManager *access_manager = NULL;
+GitVCS *vcs = NULL;
+
+class AlwaysTrueIncludeOperator : public IsIncludeOperator {
+    public:
+        virtual bool operator() (const String& pathname) {
+            return true;
+        }
+};
+
+class AlwaysBranchOperator : public BranchOperator {
+    public:
+        AlwaysBranchOperator(const String& branch_name) {
+            branch_name_ = branch_name;
+        }
+
+        virtual String operator() (const String& pathname) {
+            return branch_name_;
+        }
+
+    private:
+        String branch_name_;
+};
 
 int cmd_help(const Vector<String>& args);
 
@@ -79,6 +105,37 @@ int cmd_link(const Vector<String> &args)
     return 0;
 }
 
+int cmd_checkout(const Vector<String>& args)
+{
+    // checkout repo_path commit_id relative_path
+    if (args.size() < 5) {
+        printf("Usage: checkout repo_path commit_id relative_path username\n");
+        return 0;
+    }
+
+    vcs->Checkout(args[1], args[2], args[3], args[1], args[4]);
+
+    return 0;
+}
+
+int cmd_commit(const Vector<String>& args)
+{
+    // commit repo_path branch_name relative_path
+    if (args.size() < 5) {
+        printf("Usage: commit repo_path branch_name relative_path username\n");
+        return 0;
+    }
+
+    AlwaysTrueIncludeOperator include;
+    AlwaysBranchOperator branch(args[2]);
+
+    vcs->PartialCommit(args[1], args[2], args[3], args[1], args[4],
+            include, branch);
+
+    return 0;
+}
+
+#if 0
 int cmd_commit(const Vector<String>& args)
 {
     int rc;
@@ -92,6 +149,7 @@ int cmd_commit(const Vector<String>& args)
 
     return 0;
 }
+#endif
 
 int cmd_trace_start(const Vector<String> &args)
 {
@@ -176,6 +234,18 @@ int cmd_print_config(const Vector<String> &args)
     return 0;
 }
 
+int cmd_add_user(const Vector<String> &args)
+{
+    // TODO Implement
+    return 0;
+}
+
+int cmd_remove_user(const Vector<String> &args)
+{
+    // TODO Implement
+    return 0;
+}
+
 struct cmd_t {
     const char *cmd;
     int (*fn) (const Vector<String>& /* args */);
@@ -185,12 +255,15 @@ struct cmd_t {
 struct cmd_t fvm_commands[] = {
     // FVM Commands
     { "server", cmd_connect, "Set up the server information"},
-    { "link", cmd_link, "Link a repository to a specified destination"},
-    { "trace-start", cmd_trace_start, "Start automatical tracing"},
-    { "trace-end", cmd_trace_end, "Start automatical tracing"},
+//    { "link", cmd_link, "Link a repository to a specified destination"},
+//    { "trace-start", cmd_trace_start, "Start automatical tracing"},
+//    { "trace-end", cmd_trace_end, "Start automatical tracing"},
+    { "checkout", cmd_checkout, "Manually make a checkout"},
     { "commit", cmd_commit, "Manually make a commitment"},
-    { "backtrace-start", cmd_repo_backtrace_start, "enter backtrace mode for a specific path"},
-    { "backtrace-stop", cmd_repo_backtrace_stop, "exit backtrace mode for a specific path"},
+//    { "backtrace-start", cmd_repo_backtrace_start, "enter backtrace mode for a specific path"},
+//    { "backtrace-stop", cmd_repo_backtrace_stop, "exit backtrace mode for a specific path"},
+    { "add-user", cmd_add_user, "Add a user to a group"},
+    { "remove_user", cmd_remove_user, "Remove a user from a group"},
 
     // Utility commands
     { "help", cmd_help, "List help information" },
@@ -268,6 +341,18 @@ int main(int argc, char **argv)
 
     config = new RepoConfig(config_stream);
     client = new FVMClient(config->username(), config->user_email());
+    username = config->user_account();
+
+    // Setting up key stuff
+    key_manager = new KeyManager(username);
+    access_manager = new AccessManager(key_manager);
+    verifier = new Verifier(access_manager);
+
+    // Setting up VCS
+    vcs = new GitVCS();
+    vcs->username(config->username());
+    vcs->user_email(config->user_email());
+    vcs->verifier(verifier);
 
     while (rc != 1) {
         std::cout << "fvm> ";

@@ -69,6 +69,8 @@ class GitVCS : public VersionControlSystem {
         // Mutators
         void username(const String &value) { username_ = value; }
         void user_email(const String &value) { user_email_ = value; }
+        String username() { return username_; }
+        String user_email() { return user_email_; }
 
 
         // Get the change list for a specific repository
@@ -123,7 +125,6 @@ class GitVCS : public VersionControlSystem {
         // Encryption stuff
         // TODO Initilize them
         EncryptionManager *encryption_manager_;
-        //KeyManager *key_manager_;
         Verifier *verifier_;
         AccessManager *access_manager_;
 

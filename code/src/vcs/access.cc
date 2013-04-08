@@ -1,4 +1,5 @@
 
+#include <cstdio>
 #include <fstream>
 #include <string>
 
@@ -90,5 +91,39 @@ String AccessManager::GetGroupKeyFilename(const String& username,
 String AccessManager::GetGroupKeyDir()
 {
     return ".groupkey/";
+}
+
+bool AccessManager::AddGroupKey(const String& old_username, const String& new_username,
+        const String& groupname, const String& user_pubkey, const String& root_path)
+{
+    assert(key_manager_ != NULL);
+
+    int rc;
+    String group_key_content = AccessManager::GetGroupKey(
+        old_username, groupname, root_path);
+
+    String group_key_filename = GetGroupKeyFilename(new_username, groupname);
+    String group_key_dir = GetGroupKeyDir();
+
+    String absolute_key_path = root_path + group_key_dir + group_key_filename;
+    std::ofstream key_fout(absolute_key_path.c_str());
+
+    String key_encrypted_content = key_manager_->
+        GetNewGroupKeyFileContent(group_key_content);
+
+    key_fout.write(key_encrypted_content.c_str(), key_encrypted_content.size());
+
+    return true;
+}
+
+bool AccessManager::RemoveGroupKey(const String& username,
+        const String& groupname, const String& root_path)
+{
+    String group_key_filename = GetGroupKeyFilename(username, groupname);
+    String group_key_dir = GetGroupKeyDir();
+
+    String absolute_key_path = root_path + group_key_dir + group_key_filename;
+
+    std::remove(absolute_key_path.c_str());
 }
 
