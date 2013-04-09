@@ -59,6 +59,12 @@ class RepoConfig {
         String user_account() const { return user_account_; }
         void user_account(const String& value) { user_account_ = value; }
 
+        String pubkey_file() const { return pubkey_file_; }
+        void pubkey_file(const String& value) { pubkey_file_ = value; }
+
+        String privkey_file() const { return privkey_file_; }
+        void privkey_file(const String& value) { privkey_file_ = value; }
+
         const Map<String, TraceLevel>* trace_level_map() {
             return trace_level_manager_.trace_level_map();
         }
@@ -95,6 +101,11 @@ class RepoConfig {
 
         // user account
         String user_account_;
+
+        // pubkey file
+        String pubkey_file_;
+        // privkey file
+        String privkey_file_;
 };
 
 #endif // CONFIG_CONFIG_H_

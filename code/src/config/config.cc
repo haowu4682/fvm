@@ -78,6 +78,10 @@ void RepoConfig::ReadFromStream(std::istream& config_stream)
             user_email_ = config_line[1];
         } else if (config_line[0] == "user_account") {
             user_account_ = config_line[1];
+        } else if (config_line[0] == "privkey_file") {
+            privkey_file_ = config_line[1];
+        } else if (config_line[0] == "pubkey_file") {
+            pubkey_file_ = config_line[1];
         } else {
             LOG("Unknown config item: %s", config_line[0].c_str());
         }
