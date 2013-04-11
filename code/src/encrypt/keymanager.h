@@ -10,14 +10,18 @@
 class KeyManager {
     public:
         KeyManager (const String &username)
-            : username(username) {}
+        {
+            username_ = username;
+            user_private_key_ = NULL;
+            user_public_key_ = NULL;
+        }
 
 #if 0
         KeyManager (const String &username,
                 const String &private_key,
                 const String &public_key)
             : username(username), user_private_key(private_key),
-              user_public_key(public_key) {}
+            user_public_key(public_key) {}
 #endif
 
         void ReadPublicKeyFromFile(const String &filename);
@@ -33,11 +37,11 @@ class KeyManager {
         virtual String GetNewGroupKeyFileContent(const String &key_content);
 
     protected:
-        String username;
+        String username_;
 
     private:
-        RSA *user_private_key;
-        RSA *user_public_key;
+        RSA *user_private_key_;
+        RSA *user_public_key_;
 };
 
 

@@ -102,6 +102,18 @@ bool AccessManager::AddGroupKey(const String& old_username, const String& new_us
     String group_key_content = AccessManager::GetGroupKey(
         old_username, groupname, root_path);
 
+    if (group_key_content.size() == 0) {
+        // The group key does not exist, we need to create a new one.
+        size_t key_size = encryption_manager_->GetKeySize();
+        group_key_content.reserve(key_size);
+        for (int i = 0; i < key_size; ++i) {
+            // XXX Magic number
+            group_key_content[i] = rand() % 128;
+        }
+    }
+
+    LOG("group_key_content = %s", group_key_content.c_str());
+
     String group_key_filename = GetGroupKeyFilename(new_username, groupname);
     String group_key_dir = GetGroupKeyDir();
 

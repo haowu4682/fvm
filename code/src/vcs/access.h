@@ -12,7 +12,11 @@
 class AccessManager {
     public:
 
-        AccessManager(KeyManager *key_manager) : key_manager_(key_manager) {}
+        AccessManager(KeyManager *key_manager,
+                EncryptionManager *encryption_manager) :
+            key_manager_(key_manager),
+            encryption_manager_(encryption_manager)
+        {}
 
         // Get whether a user belongs to a group based on whether the user has
         // the group key based on a root tree of a commit.
@@ -70,7 +74,7 @@ class AccessManager {
 
     protected:
         KeyManager *key_manager_;
-//        EncryptionManager *encryption_manager_;
+        EncryptionManager *encryption_manager_;
 };
 
 #endif // VCS_ACCESS_H__

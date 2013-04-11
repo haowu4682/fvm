@@ -20,6 +20,7 @@ String username;
 FVMClient *client = NULL;
 PartialTracer *tracer = NULL;
 RepoConfig *config = NULL;
+EncryptionManager *encryption_manager = NULL;
 KeyManager *key_manager = NULL;
 AccessManager *access_manager = NULL;
 Verifier *verifier = NULL;
@@ -364,12 +365,13 @@ int main(int argc, char **argv)
     username = config->user_account();
 
     // Setting up key stuff
+    encryption_manager = new StandardEncryptionManager();
     key_manager = new KeyManager(username);
-    access_manager = new AccessManager(key_manager);
+    access_manager = new AccessManager(key_manager, encryption_manager);
     verifier = new Verifier(access_manager);
 
-    key_manager->ReadPublicKeyFromFile(PUBLICKEY_PATH);
-    key_manager->ReadPrivateKeyFromFile(PRIVATEKEY_PATH);
+    key_manager->ReadPublicKeyFromFile(config->pubkey_file());
+    key_manager->ReadPrivateKeyFromFile(config->privkey_file());
 
     // Setting up VCS
     vcs = new GitVCS();
@@ -388,6 +390,12 @@ int main(int argc, char **argv)
             DBG("Command execution failed. error code = %d", rc);
         }
     }
+
+    delete vcs;
+    delete verifier;
+    delete access_manager;
+    delete key_manager;
+    delete encryption_manager;
 
     delete client;
     delete config;

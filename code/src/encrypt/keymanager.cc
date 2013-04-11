@@ -11,19 +11,19 @@ void KeyManager::ReadPublicKeyFromFile(const String &filename)
 {
     FILE *file = fopen(filename.c_str(), "r");
     // XXX Check this sentence if reading breaks!
-    PEM_read_RSAPublicKey(file, &user_public_key, NULL, NULL);
+    PEM_read_RSAPublicKey(file, &user_public_key_, NULL, NULL);
 }
 
 void KeyManager::ReadPrivateKeyFromFile(const String &filename)
 {
     FILE *file = fopen(filename.c_str(), "r");
     // XXX Check this sentence if reading breaks!
-    PEM_read_RSAPrivateKey(file, &user_private_key, NULL, NULL);
+    PEM_read_RSAPrivateKey(file, &user_private_key_, NULL, NULL);
 }
 
 String KeyManager::GetGroupKeyFileName(const String &group_name)
 {
-    return group_name + "." + username + ".key";
+    return group_name + "." + username_ + ".key";
 }
 
 String KeyManager::GetGroupKeyContent(const String &file_content)
@@ -37,7 +37,7 @@ String KeyManager::GetGroupKeyContent(const String &file_content)
     strcpy((char *)in_buf, file_content.c_str());
 
     rc = RSA_private_decrypt(file_content.size(), in_buf,
-            out_buf, user_private_key, RSA_PKCS1_OAEP_PADDING);
+            out_buf, user_private_key_, RSA_PKCS1_OAEP_PADDING);
     if (rc < 0) {
         LOG("Group key decryption fails for %s.", file_content.c_str());
         out_buf[0] = '\0';
@@ -62,7 +62,7 @@ String KeyManager::GetNewGroupKeyFileContent(const String &key_content)
     strcpy((char *)in_buf, key_content.c_str());
 
     rc = RSA_public_encrypt(key_content.size(), in_buf,
-            out_buf, user_private_key, RSA_PKCS1_OAEP_PADDING);
+            out_buf, user_public_key_, RSA_PKCS1_OAEP_PADDING);
     if (rc < 0) {
         LOG("Group key encryption fails for %s.", key_content.c_str());
         out_buf[0] = '\0';

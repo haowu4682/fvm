@@ -28,8 +28,8 @@ DAEMONOBJ       := $(patsubst $(SRCDIR)/daemon/%.cc, $(BINDIR)/daemon/%.o, $(DAE
 
 CC              := g++
 LD              := g++
-CFLAGS          := $(CFLAGS) -I$(SRCDIR)/ -g -D_FILE_OFFSET_BITS=64 -DDEBUG
-LDFLAGS         := $(LDFLAGS) -g
+CFLAGS          := $(CFLAGS) -I$(SRCDIR)/ -g -O0 -D_FILE_OFFSET_BITS=64 -DDEBUG
+LDFLAGS         := $(LDFLAGS) -g -L /usr/local/ssl/lib/
 LDADD           := -lrt -lgit2 -lssl -lcrypto -lssh
 #LDADD           := -lrt -lssl -lssh2 -lgit2 -lfuse
 

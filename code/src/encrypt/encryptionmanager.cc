@@ -39,5 +39,14 @@ void StandardEncryptionManager::Decrypt(char *output, const char *input,
     delete[] ivec_buffer;
 }
 
+size_t StandardEncryptionManager::GetKeySize()
+{
+    return AES_BLOCK_SIZE;
+}
+
+size_t StandardEncryptionManager::GetIVSize()
+{
+    return AES_BLOCK_SIZE;
+}
 
 

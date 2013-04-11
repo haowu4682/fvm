@@ -519,7 +519,8 @@ int main(int argc, char **argv)
     EncryptionManager *encrypt_manager = new StandardEncryptionManager;
     // TODO Use actual user name
     KeyManager *key_manager = new KeyManager("haowu");
-    AccessManager *access_manager = new AccessManager(key_manager);
+    AccessManager *access_manager = new AccessManager(key_manager,
+            encrypt_manager);
     Verifier verifier(access_manager);
 
     Daemon daemon(atoi(argv[1]), &verifier);
