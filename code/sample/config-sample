@@ -3,5 +3,5 @@ user_email haowu@cs.utexas.edu
 user_account haowu
 time_interval 3600
 tracelevel / 2
-privkey_file /home/haowu/.ssh/id_rsa
-pubkey_file /home/haowu/.ssh/id_rsa.pub
+privkey_file /home/haowu/id_rsa.pem
+pubkey_file /home/haowu/id_rsa.pub.pem

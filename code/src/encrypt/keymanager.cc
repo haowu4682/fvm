@@ -11,7 +11,8 @@ void KeyManager::ReadPublicKeyFromFile(const String &filename)
 {
     FILE *file = fopen(filename.c_str(), "r");
     // XXX Check this sentence if reading breaks!
-    PEM_read_RSAPublicKey(file, &user_public_key_, NULL, NULL);
+    //PEM_read_RSAPublicKey(file, &user_public_key_, NULL, NULL);
+    PEM_read_RSA_PUBKEY(file, &user_public_key_, NULL, NULL);
 }
 
 void KeyManager::ReadPrivateKeyFromFile(const String &filename)
@@ -54,12 +55,13 @@ out:
 String KeyManager::GetNewGroupKeyFileContent(const String &key_content)
 {
     int rc;
-    unsigned char *in_buf = new unsigned char[key_content.size()];
-    unsigned char *out_buf = new unsigned char[key_content.size()];
+    size_t size = key_content.size();
+    unsigned char *in_buf = new unsigned char[size];
+    unsigned char *out_buf = new unsigned char[size];
 
     // TODO Check whether removing "const" constraint is safety, if so we can
     // save the time for copying the content
-    strcpy((char *)in_buf, key_content.c_str());
+    strncpy((char *)in_buf, key_content.c_str(), size);
 
     rc = RSA_public_encrypt(key_content.size(), in_buf,
             out_buf, user_public_key_, RSA_PKCS1_OAEP_PADDING);

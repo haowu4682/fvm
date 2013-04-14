@@ -108,7 +108,7 @@ bool AccessManager::AddGroupKey(const String& old_username, const String& new_us
         group_key_content.reserve(key_size);
         for (int i = 0; i < key_size; ++i) {
             // XXX Magic number
-            group_key_content[i] = rand() % 128;
+            group_key_content[i] = rand() % (128-32) + 32;
         }
     }
 
