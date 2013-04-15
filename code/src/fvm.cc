@@ -284,7 +284,7 @@ struct cmd_t fvm_commands[] = {
 //    { "backtrace-start", cmd_repo_backtrace_start, "enter backtrace mode for a specific path"},
 //    { "backtrace-stop", cmd_repo_backtrace_stop, "exit backtrace mode for a specific path"},
     { "add-user", cmd_add_user, "Add a user to a group"},
-    { "remove_user", cmd_remove_user, "Remove a user from a group"},
+    { "remove-user", cmd_remove_user, "Remove a user from a group"},
 
     // Utility commands
     { "help", cmd_help, "List help information" },
