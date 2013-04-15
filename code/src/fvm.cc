@@ -379,6 +379,7 @@ int main(int argc, char **argv)
     vcs->user_email(config->user_email());
     vcs->verifier(verifier);
     vcs->access_manager(access_manager);
+    vcs->encryption_manager(encryption_manager);
 
     while (rc != 1) {
         std::cout << "fvm> ";

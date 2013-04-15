@@ -76,6 +76,8 @@ class GitVCS : public VersionControlSystem {
         Verifier* verifier() { return verifier_; }
         void access_manager(AccessManager *value) { access_manager_ = value;}
         AccessManager* access_manager() { return access_manager_; }
+        void encryption_manager(EncryptionManager *value) { encryption_manager_ = value;}
+        EncryptionManager* encryption_manager() { return encryption_manager_; }
 
         // Get the change list for a specific repository
         // Return the number of items to be included in the change list.
@@ -175,6 +177,7 @@ class GitVCS : public VersionControlSystem {
                 git_repository *repo,
                 const String& username,
                 const String& branch_name,
+                const String& root_path,
                 const String& source_path,
                 const String& relative_path,
                 const git_oid *old_object_oid,

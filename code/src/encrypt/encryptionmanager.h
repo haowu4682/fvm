@@ -7,10 +7,10 @@
 
 class EncryptionManager {
     public:
-        virtual void Encrypt(char *output, const char *input, size_t size,
+        virtual size_t Encrypt(char *output, const char *input, size_t size,
                 const String &key, const String &ivec) = 0;
 
-        virtual void Decrypt(char *output, const char *input, size_t size,
+        virtual size_t Decrypt(char *output, const char *input, size_t size,
                 const String &key, const String &ivec) = 0;
 
         virtual size_t GetIVSize() = 0;
@@ -21,10 +21,10 @@ class EncryptionManager {
 
 class StandardEncryptionManager : public EncryptionManager{
     public:
-        virtual void Encrypt(char *output, const char *input, size_t size,
+        virtual size_t Encrypt(char *output, const char *input, size_t size,
                 const String &key, const String &ivec);
 
-        virtual void Decrypt(char *output, const char *input, size_t size,
+        virtual size_t Decrypt(char *output, const char *input, size_t size,
                 const String &key, const String &ivec);
 
         virtual size_t GetIVSize();

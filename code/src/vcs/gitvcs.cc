@@ -750,6 +750,7 @@ int GitVCS::CreateObjectRecursive(
         git_repository *repo,
         const String& username,
         const String& branch_name,
+        const String& root_path,
         const String& source_path,
         const String& relative_path,
         const git_oid *old_object_oid,
@@ -807,24 +808,38 @@ int GitVCS::CreateObjectRecursive(
         }
 #endif
 
-        char *file_content;
         char *file_encrypted_content;
         String key_content;
-        size_t file_content_size, file_encrypted_content_size;
+        size_t file_encrypted_content_size;
 
         // NOTE We do not need to specify a correct file name here because we
         // only need the username and groupname.
         GitTreeEntryName name("", source_stat);
-        String group_key = access_manager_->GetGroupKey(name.user, name.group,
-                source_path);
+        key_content = access_manager_->GetGroupKey(name.user, name.group,
+                root_path);
+
+        // Read file_content
+        std::fstream fin(source_path.c_str());
+        std::stringstream oss;
+        oss << fin.rdbuf();
+
+        // Init file_encrypted_content
+        // XXX Magic number
+        size_t file_encrypted_content_capacity = oss.str().size() + 1024;
+        file_encrypted_content = new char[file_encrypted_content_capacity];
+
 
         // TODO: Fill in IV.
-        encryption_manager_->Encrypt(file_encrypted_content, file_content,
-                file_content_size, key_content, "");
+        file_encrypted_content_size = encryption_manager_->Encrypt(
+                file_encrypted_content, oss.str().c_str(),
+                oss.str().size(), key_content, "");
 
         // Create a blob for the file
         rc = git_blob_create_frombuffer(source_oid, repo, file_encrypted_content,
                 file_encrypted_content_size);
+
+        delete[] file_encrypted_content;
+
         if (rc < 0) {
             LOG("Cannot create a blob for file: %s", source_path.c_str());
             return rc;
@@ -905,9 +920,9 @@ int GitVCS::CreateObjectRecursive(
 
             // Recursively call the function to create an object for the child
             rc = CreateObjectRecursive(&child_oid, &child_stat, new_access_list,
-                    repo, username, branch_name, child_absolute_path.c_str(),
-                    child_relative_path.c_str(), old_child_oid, old_access_list,
-                    IsIncluded, GetBranch);
+                    repo, username, branch_name, root_path,
+                    child_absolute_path.c_str(), child_relative_path.c_str(),
+                    old_child_oid, old_access_list, IsIncluded, GetBranch);
             if (rc < 0) {
                 DBG("Failure in recursively create the object!");
                 return rc;
@@ -1273,8 +1288,8 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     DBG("new_access_list = %s", new_access_list.ToString().c_str());
 
     rc = CreateObjectRecursive(&partial_oid, NULL, &new_access_list, repo, username_,
-            branch_name, work_dir, relative_path, &old_partial_tree_id,// NULL,
-            &old_access_list, IsIncluded, GetBranch);
+            branch_name, repo_pathname,  work_dir, relative_path,
+            &old_partial_tree_id, &old_access_list, IsIncluded, GetBranch);
     if (rc < 0) {
         LOG("Failed to create the partial tree!");
         return rc;
