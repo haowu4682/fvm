@@ -57,13 +57,14 @@ String KeyManager::GetNewGroupKeyFileContent(const String &key_content)
     int rc;
     size_t size = key_content.size();
     unsigned char *in_buf = new unsigned char[size];
-    unsigned char *out_buf = new unsigned char[size];
+    // XXX Magic number
+    unsigned char *out_buf = new unsigned char[1024];
 
     // TODO Check whether removing "const" constraint is safety, if so we can
     // save the time for copying the content
     strncpy((char *)in_buf, key_content.c_str(), size);
 
-    rc = RSA_public_encrypt(key_content.size(), in_buf,
+    rc = RSA_public_encrypt(size, in_buf,
             out_buf, user_public_key_, RSA_PKCS1_OAEP_PADDING);
     if (rc < 0) {
         LOG("Group key encryption fails for %s.", key_content.c_str());
@@ -71,7 +72,7 @@ String KeyManager::GetNewGroupKeyFileContent(const String &key_content)
     }
 
 out:
-    String ret((char *)out_buf);
+    String ret((char *)out_buf, rc);
     delete[] in_buf;
     delete[] out_buf;
 

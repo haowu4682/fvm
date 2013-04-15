@@ -105,7 +105,7 @@ bool AccessManager::AddGroupKey(const String& old_username, const String& new_us
     if (group_key_content.size() == 0) {
         // The group key does not exist, we need to create a new one.
         size_t key_size = encryption_manager_->GetKeySize();
-        group_key_content.reserve(key_size);
+        group_key_content.resize(key_size);
         for (int i = 0; i < key_size; ++i) {
             // XXX Magic number
             group_key_content[i] = rand() % (128-32) + 32;
