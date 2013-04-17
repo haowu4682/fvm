@@ -13,6 +13,7 @@
 // Constant definition
 #define kNanosecondsToSeconds 1e-9
 #define MAX_KEY_SIZE 4096
+#define AES_KEY_SIZE 128
 
 // Type definition
 #define Vector std::vector

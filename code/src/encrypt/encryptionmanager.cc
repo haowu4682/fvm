@@ -7,12 +7,13 @@
 
 void GetAESKey(AES_KEY &key_value, const String &key_str, const int enc)
 {
+    int rc;
     if (enc) {
-        AES_set_encrypt_key((const unsigned char *)key_str.c_str(),
-                key_str.size() * sizeof(char), &key_value);
+        rc = AES_set_encrypt_key((const unsigned char *)key_str.c_str(),
+                /*key_str.size() * sizeof(char)*/AES_KEY_SIZE, &key_value);
     } else {
-        AES_set_decrypt_key((const unsigned char *)key_str.c_str(),
-                key_str.size() * sizeof(char), &key_value);
+        rc = AES_set_decrypt_key((const unsigned char *)key_str.c_str(),
+                /*key_str.size() * sizeof(char)*/AES_KEY_SIZE, &key_value);
     }
 }
 
@@ -20,6 +21,7 @@ size_t StandardEncryptionManager::Encrypt(char *output, const char *input,
         size_t size, const String &key, const String &ivec)
 {
     AES_KEY aes_key;
+    memset(&aes_key, 0, sizeof(AES_KEY));
     GetAESKey(aes_key, key, AES_ENCRYPT);
 
     unsigned char *ivec_buffer = new unsigned char[ivec.size()];
