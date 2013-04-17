@@ -25,6 +25,9 @@
 
 #define GIT_BINARY "/usr/bin/git"
 
+// XXX Fix IV right now
+#define IV "thequickbrownfox"
+
 void PrintOid(const git_oid *oid)
 {
     char buf[10000];
@@ -466,8 +469,7 @@ int GitVCS::GitBlobWrite(git_repository *repo, git_blob *blob,
 
     // Step 3: Decrypt
     char *new_buf = new char[size + AES_BLOCK_SIZE];
-    // TODO Specify IV
-    encryption_manager_->Decrypt(new_buf, (const char *)buf, size, group_key, "");
+    encryption_manager_->Decrypt(new_buf, (const char *)buf, size, group_key, IV);
 
     // Step 4: Write the content
     FILE *file = fopen(destination.c_str(), "w");
@@ -822,17 +824,17 @@ int GitVCS::CreateObjectRecursive(
         std::fstream fin(source_path.c_str());
         std::stringstream oss;
         oss << fin.rdbuf();
+        String file_content = oss.str();
 
         // Init file_encrypted_content
         // XXX Magic number
-        size_t file_encrypted_content_capacity = oss.str().size() + 1024;
+        size_t file_encrypted_content_capacity = file_content.size() + 1024;
         file_encrypted_content = new char[file_encrypted_content_capacity];
 
 
-        // TODO: Fill in IV.
         file_encrypted_content_size = encryption_manager_->Encrypt(
-                file_encrypted_content, oss.str().c_str(),
-                oss.str().size(), key_content, "");
+                file_encrypted_content, file_content.c_str(),
+                file_content.size(), key_content, IV);
 
         // Create a blob for the file
         rc = git_blob_create_frombuffer(source_oid, repo, file_encrypted_content,
