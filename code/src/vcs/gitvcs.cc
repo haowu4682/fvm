@@ -784,16 +784,16 @@ int GitVCS::CreateObjectRecursive(
 
     stat(source_path.c_str(), source_stat);
 
-    if (S_ISREG(source_stat->st_mode)) {
-
-        // Check branch
-        if (!IsIncluded(relative_path) || source_branch_name != branch_name) {
-            if (old_object_oid != NULL) {
-                git_oid_cpy(source_oid, old_object_oid);
-                return 0;
-            }
-            return 1;
+    // Check branch
+    if (!IsIncluded(relative_path) || source_branch_name != branch_name) {
+        if (old_object_oid != NULL) {
+            git_oid_cpy(source_oid, old_object_oid);
+            return 0;
         }
+        return 1;
+    }
+
+    if (S_ISREG(source_stat->st_mode)) {
 
 #if 0
         // Check access list

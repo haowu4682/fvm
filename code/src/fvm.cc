@@ -32,7 +32,11 @@ GitVCS *vcs = NULL;
 class AlwaysTrueIncludeOperator : public IsIncludeOperator {
     public:
         virtual bool operator() (const String& pathname) {
-            return true;
+            if (pathname.substr(0, 5) != "/.git") {
+                return true;
+            } else {
+                return false;
+            }
         }
 };
 

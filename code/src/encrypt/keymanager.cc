@@ -35,7 +35,7 @@ String KeyManager::GetGroupKeyContent(const String &file_content)
 
     // TODO Check whether removing "const" constraint is safety, if so we can
     // save the time for copying the content
-    strcpy((char *)in_buf, file_content.c_str());
+    memcpy((char *)in_buf, file_content.c_str(), file_content.size());
 
     rc = RSA_private_decrypt(file_content.size(), in_buf,
             out_buf, user_private_key_, RSA_PKCS1_OAEP_PADDING);
@@ -58,7 +58,7 @@ String KeyManager::GetNewGroupKeyFileContent(const String &key_content)
     size_t size = key_content.size();
     unsigned char *in_buf = new unsigned char[size];
     // XXX Magic number
-    unsigned char *out_buf = new unsigned char[1024];
+    unsigned char *out_buf = new unsigned char[10000];
 
     // TODO Check whether removing "const" constraint is safety, if so we can
     // save the time for copying the content

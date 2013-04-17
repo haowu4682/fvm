@@ -70,13 +70,20 @@ String AccessManager::GetGroupKey(const String& username,
     int rc;
     String group_key_filename = GetGroupKeyFilename(username, groupname);
     String group_key_dir = GetGroupKeyDir();
-    String absolute_key_path = root_path + group_key_dir + group_key_filename;
+
+    String absolute_key_path;
+    if (root_path.size() == 0 || root_path[root_path.size()-1] == '/') {
+        absolute_key_path = root_path + group_key_dir + group_key_filename;
+    } else {
+        absolute_key_path = root_path + "/" + group_key_dir + group_key_filename;
+    }
+
     std::ifstream key_fin(absolute_key_path.c_str());
 
     char key_encrypted_content[MAX_KEY_SIZE];
     key_fin.read(key_encrypted_content, MAX_KEY_SIZE);
 
-    String key_content = key_manager_->GetGroupKeyContent(key_encrypted_content);
+    String key_content = key_manager_->GetGroupKeyContent(String(key_encrypted_content, key_fin.gcount()));
 
     return key_content;
 }
