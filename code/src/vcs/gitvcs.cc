@@ -26,7 +26,8 @@
 #define GIT_BINARY "/usr/bin/git"
 
 // XXX Fix IV right now
-#define IV "thequickbrownfox"
+#define IV "thequickbrownfoxthequickbrownfoxthequickbrownfoxthequickbrownfoxthequickbrownfoxthequickbrownfoxthequickbrownfoxthequickbrownfox" \
+"aabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghbcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefgh"
 
 void PrintOid(const git_oid *oid)
 {
@@ -64,7 +65,7 @@ void PrintTreeEntry(const git_tree_entry *entry)
 
 void PrintTree(git_tree *tree)
 {
-    DBG("tree entry size = %ld", git_tree_entrycount(tree));
+    //DBG("tree entry size = %ld", git_tree_entrycount(tree));
     printf("name oid type\n");
     for (int i = 0; i < git_tree_entrycount(tree); ++i) {
         const git_tree_entry* entry = git_tree_entry_byindex(tree, i);
@@ -332,7 +333,7 @@ int GetCommitTree(const git_oid *commit_oid, git_repository *repo, git_tree **co
         return rc;
     }
 
-    DBG("commit tree is:");
+    //DBG("commit tree is:");
     PrintTree(*commit_tree);
 }
 
@@ -403,7 +404,7 @@ int GitTreeSearch(git_oid *relative_oid,
     const git_oid *current_oid;
 
     current_oid = git_tree_id(root_tree);
-    DBG("OID:");
+    //DBG("OID:");
     PrintOid(current_oid);
 
     for (int i = 0; i < relative_path_splitted.size(); ++i) {
@@ -428,7 +429,7 @@ int GitTreeSearch(git_oid *relative_oid,
             return -1;
         }
 
-        DBG("CURRENT OID:");
+        //DBG("CURRENT OID:");
         PrintOid(current_oid);
 
         // Step 3: Check if the object is tree object, and modify current_tree
@@ -447,7 +448,7 @@ int GitTreeSearch(git_oid *relative_oid,
         git_oid_cpy(relative_oid, current_oid);
     }
 
-    DBG("RELATIVE OID RESULT:");
+    //DBG("RELATIVE OID RESULT:");
     PrintOid(relative_oid);
 
     return 0;
@@ -460,8 +461,8 @@ int GitVCS::GitBlobWrite(git_repository *repo, git_blob *blob,
     const void *buf = git_blob_rawcontent(blob);
     size_t size = git_blob_rawsize(blob);
 
-    DBG("size = %ld", size);
-    DBG("content = %s", (char *)buf);
+    //DBG("size = %ld", size);
+    //DBG("content = %s", (char *)buf);
 
     // Step 2: Find group key
     String group_key = access_manager_->GetGroupKey(name.user, name.group,
@@ -469,6 +470,8 @@ int GitVCS::GitBlobWrite(git_repository *repo, git_blob *blob,
 
     // Step 3: Decrypt
     char *new_buf = new char[size + AES_BLOCK_SIZE];
+    DBG("group_key=%s", group_key.c_str());
+    DBG("IV=%s", IV);
     encryption_manager_->Decrypt(new_buf, (const char *)buf, size, group_key, IV);
 
     // Step 4: Write the content
@@ -831,6 +834,7 @@ int GitVCS::CreateObjectRecursive(
         size_t file_encrypted_content_capacity = file_content.size() + 1024;
         file_encrypted_content = new char[file_encrypted_content_capacity];
 
+        DBG("keycontent=%s", key_content.c_str());
 
         file_encrypted_content_size = encryption_manager_->Encrypt(
                 file_encrypted_content, file_content.c_str(),
@@ -847,7 +851,7 @@ int GitVCS::CreateObjectRecursive(
             return rc;
         }
 
-        DBG("Created blob, oid = ");
+        //DBG("Created blob, oid = ");
         PrintOid(source_oid);
 
     } else if (S_ISDIR(source_stat->st_mode)) {
@@ -940,7 +944,7 @@ created:
                         tree_entry_name_str.c_str(), &child_oid, tree_entry_mode);
                 if (rc < 0) {
                     LOG("Cannot insert object into tree builder for file: %s, errno = %d", child_absolute_path.c_str(), rc);
-                    DBG("tree entry name: %s", tree_entry_name_str.c_str());
+                    //DBG("tree entry name: %s", tree_entry_name_str.c_str());
                     return -1;
                 }
 
@@ -965,7 +969,7 @@ created:
         git_treebuilder_free(tree_builder);
         closedir(directory);
 
-        DBG("Created tree, oid = ");
+        //DBG("Created tree, oid = ");
         PrintOid(source_oid);
 
     } else {
@@ -1167,7 +1171,7 @@ int GitVCS::Checkout(const String& repo_pathname,
         return rc;
     }
 
-    DBG("Relative root is");
+    //DBG("Relative root is");
     PrintOid(&relative_oid);
 
     // Step 4: Read access list
@@ -1264,7 +1268,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     old_commit_tree_id = git_tree_id(old_commit_tree);
 
 #ifdef DEBUG
-    DBG("old commit tree: ");
+    //DBG("old commit tree: ");
     PrintOid(git_tree_id(old_commit_tree));
     PrintTree(old_commit_tree);
 #endif
@@ -1273,7 +1277,6 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     rc = ReadAccessList(old_access_list, repo, old_commit_tree);
     if (rc < 0) {
         LOG("Failed to read access list!");
-        return rc;
     }
 
     // Step 5: Create partial trees
@@ -1286,8 +1289,8 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     }
 
     new_access_list = old_access_list;
-    DBG("old_access_list = %s", old_access_list.ToString().c_str());
-    DBG("new_access_list = %s", new_access_list.ToString().c_str());
+    //DBG("old_access_list = %s", old_access_list.ToString().c_str());
+    //DBG("new_access_list = %s", new_access_list.ToString().c_str());
 
     rc = CreateObjectRecursive(&partial_oid, NULL, &new_access_list, repo, username_,
             branch_name, repo_pathname,  work_dir, relative_path,
@@ -1300,7 +1303,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     }
 
     // Debug: print partial tree
-#ifdef DEBUG
+#ifdef DEBUG__
     git_tree *partial_tree;
     rc = git_tree_lookup(&partial_tree, repo, &partial_oid);
     if (rc < 0) {
@@ -1320,9 +1323,9 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     }
 
 #ifdef DEBUG
-    DBG("full commit tree: ");
-    PrintOid(git_tree_id(new_commit_tree));
-    PrintTree(new_commit_tree);
+    //DBG("full commit tree: ");
+    //PrintOid(git_tree_id(new_commit_tree));
+    //PrintTree(new_commit_tree);
 #endif
 
     // Step 7: Create new access list
@@ -1347,7 +1350,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
 
     // Step 9: Get branch information
     const char *reference_name_c_str = git_reference_name(head_ref);
-    DBG("old reference name: %s", reference_name_c_str);
+    //DBG("old reference name: %s", reference_name_c_str);
 
     // Step 10: Create commit object
     if (CheckFastForward) {

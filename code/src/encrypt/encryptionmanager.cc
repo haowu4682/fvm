@@ -30,6 +30,9 @@ size_t StandardEncryptionManager::Encrypt(char *output, const char *input,
     AES_cbc_encrypt((unsigned char *)input, (unsigned char *)output, size,
             &aes_key, ivec_buffer, AES_ENCRYPT);
 
+    LOG("input=%s", input);
+    LOG("output=%s", output);
+
     delete[] ivec_buffer;
 
     // XXX Is this correct?
@@ -48,6 +51,9 @@ size_t StandardEncryptionManager::Decrypt(char *output, const char *input,
     AES_cbc_encrypt((unsigned char *)input, (unsigned char *)output, size,
             &aes_key, ivec_buffer, AES_DECRYPT);
 
+    LOG("input=%s", input);
+    LOG("output=%s", output);
+
     delete[] ivec_buffer;
 
     // XXX Is this correct?
@@ -56,12 +62,12 @@ size_t StandardEncryptionManager::Decrypt(char *output, const char *input,
 
 size_t StandardEncryptionManager::GetKeySize()
 {
-    return AES_BLOCK_SIZE;
+    return AES_KEY_SIZE;
 }
 
 size_t StandardEncryptionManager::GetIVSize()
 {
-    return AES_BLOCK_SIZE;
+    return AES_KEY_SIZE;
 }
 
 
