@@ -29,6 +29,53 @@
 #define IV "thequickbrownfoxthequickbrownfoxthequickbrownfoxthequickbrownfoxthequickbrownfoxthequickbrownfoxthequickbrownfoxthequickbrownfox" \
 "aabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghbcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefgh"
 
+bool NeedEncrypt(const String& relative_path)
+{
+    int rc;
+    Vector<String> relative_path_array;
+
+    rc = split(relative_path, "/", relative_path_array);
+    if (rc <= 0) {
+        return true;
+    }
+
+    //LOG("relative_path:%s", relative_path_array[1].c_str());
+    if (IsPrefix(".fvmaccesslist", relative_path_array[1]) ||
+            IsPrefix(".groupkey", relative_path_array[1])) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+bool NeedDecrypt(const String& relative_path)
+{
+    int rc;
+    Vector<String> relative_path_array;
+
+    if (!NeedEncrypt("/" + relative_path))
+        return false;
+
+    rc = split(relative_path, "/", relative_path_array);
+    if (rc <= 0) {
+        return true;
+    }
+
+#if 0
+    for (int i = 0; i < relative_path_array.size(); ++i) {
+        DBG("relative_path[%d]:%s", i, relative_path_array[i].c_str());
+    }
+#endif
+
+    GitTreeEntryName entry_name(relative_path_array[0]);
+    if (IsPrefix(".fvmaccesslist", entry_name.name) ||
+            IsPrefix(".groupkey", entry_name.name)) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 void PrintOid(const git_oid *oid)
 {
     char buf[10000];
@@ -65,7 +112,6 @@ void PrintTreeEntry(const git_tree_entry *entry)
 
 void PrintTree(git_tree *tree)
 {
-    //DBG("tree entry size = %ld", git_tree_entrycount(tree));
     printf("name oid type\n");
     for (int i = 0; i < git_tree_entrycount(tree); ++i) {
         const git_tree_entry* entry = git_tree_entry_byindex(tree, i);
@@ -81,9 +127,9 @@ String GitTreeEntryName::ToString() const
     std::ostringstream sout;
 
     sout << mode << "@"
-         << user << "@"
-         << group << "@"
-         << name;
+        << user << "@"
+        << group << "@"
+        << name;
 
     return sout.str();
 }
@@ -332,9 +378,6 @@ int GetCommitTree(const git_oid *commit_oid, git_repository *repo, git_tree **co
         LOG("Failure: Commit tree cannot be found.");
         return rc;
     }
-
-    //DBG("commit tree is:");
-    PrintTree(*commit_tree);
 }
 
 int ChangeListCallback(const char *pathname_c_str, unsigned status, void* list)
@@ -404,8 +447,6 @@ int GitTreeSearch(git_oid *relative_oid,
     const git_oid *current_oid;
 
     current_oid = git_tree_id(root_tree);
-    //DBG("OID:");
-    PrintOid(current_oid);
 
     for (int i = 0; i < relative_path_splitted.size(); ++i) {
         if (tree_link_path != NULL) {
@@ -429,9 +470,6 @@ int GitTreeSearch(git_oid *relative_oid,
             return -1;
         }
 
-        //DBG("CURRENT OID:");
-        PrintOid(current_oid);
-
         // Step 3: Check if the object is tree object, and modify current_tree
         if (i != relative_path_splitted.size() - 1) {
 
@@ -448,43 +486,49 @@ int GitTreeSearch(git_oid *relative_oid,
         git_oid_cpy(relative_oid, current_oid);
     }
 
-    //DBG("RELATIVE OID RESULT:");
-    PrintOid(relative_oid);
-
     return 0;
 }
 
 int GitVCS::GitBlobWrite(git_repository *repo, git_blob *blob,
-        const String& destination, const GitTreeEntryName &name)
+        const String& destination, const GitTreeEntryName &name,
+        const String& relative_path)
 {
     // Step 1: Read in blob content
     const void *buf = git_blob_rawcontent(blob);
     size_t size = git_blob_rawsize(blob);
-
-    //DBG("size = %ld", size);
-    //DBG("content = %s", (char *)buf);
 
     // Step 2: Find group key
     String group_key = access_manager_->GetGroupKey(name.user, name.group,
             destination);
 
     // Step 3: Decrypt
-    char *new_buf = new char[size + AES_BLOCK_SIZE];
-    DBG("group_key=%s", group_key.c_str());
-    DBG("IV=%s", IV);
-    encryption_manager_->Decrypt(new_buf, (const char *)buf, size, group_key, IV);
+    //DBG("group_key=%s", group_key.c_str());
+    //DBG("IV=%s", IV);
+    char *new_buf;
+    String path = relative_path + name.name;
+    DBG("path = %s", path.c_str());
+    if (NeedDecrypt(path)) {
+        new_buf = new char[size + AES_BLOCK_SIZE];
+        encryption_manager_->Decrypt(new_buf, (const char *)buf, size, group_key, IV);
+    } else {
+        new_buf = (char *)buf;
+    }
 
     // Step 4: Write the content
+    DBG("destination=%s, relative_path=%s, name=%s, need_decrypt=%d", destination.c_str(),
+            relative_path.c_str(), name.name.c_str(), NeedDecrypt(relative_path));
     FILE *file = fopen(destination.c_str(), "w");
     if (file == NULL) {
         LOG("Cannot open file to write: %s", destination.c_str());
         return -1;
     }
-    fwrite((char *)buf, size, 1, file);
+    fwrite(new_buf, size, 1, file);
     fclose(file);
     name.WriteToFile(destination);
 
-    delete new_buf;
+    if (new_buf != buf) {
+        delete []new_buf;
+    }
 
     return 0;
 }
@@ -492,7 +536,7 @@ int GitVCS::GitBlobWrite(git_repository *repo, git_blob *blob,
 struct GitTreeWriteCallbackPayload {
     git_repository *repo;
     const String *destination;
-//    GitTreeEntryName info;
+    //    GitTreeEntryName info;
     AccessList *access_list;
     const String *username;
     GitVCS *vcs;
@@ -521,9 +565,6 @@ int GitTreeWriteCallback(const char *root,
         const git_tree_entry *entry,
         void *payload)
 {
-    DBG("Tree Entry: ");
-    PrintTreeEntry(entry);
-
     int rc;
     GitTreeWriteCallbackPayload *data =
         static_cast<GitTreeWriteCallbackPayload *> (payload);
@@ -543,9 +584,9 @@ int GitTreeWriteCallback(const char *root,
     file_name_stream << *data->destination << "/" << GetRealPath(root);
     file_name_stream << tree_entry_name.name;
     String file_name = file_name_stream.str();
-    DBG("destination:%s, root:%s, name:%s", data->destination->c_str(),
-            root, tree_entry_name.name.c_str());
-    DBG("file name:%s", file_name.c_str());
+    //DBG("destination:%s, root:%s, name:%s", data->destination->c_str(),
+    //        root, tree_entry_name.name.c_str());
+    //DBG("file name:%s", file_name.c_str());
 
     // Step 4 Create file/dir for child
     git_otype entry_type = git_tree_entry_type(entry);
@@ -565,7 +606,7 @@ int GitTreeWriteCallback(const char *root,
                 LOG("Error in git data structure: blob is not found.");
             }
             data->vcs->GitBlobWrite(data->repo, entry_blob, file_name,
-                    tree_entry_name);
+                    tree_entry_name, root);
             break;
 
         default:
@@ -639,7 +680,7 @@ int GitVCS::GitObjectWrite(git_repository *repo,
             stat(destination.c_str(), &destination_stat);
             tree_entry_name.Init(destination, &destination_stat);
 
-            GitBlobWrite(repo, root_blob, destination, tree_entry_name);
+            GitBlobWrite(repo, root_blob, destination, tree_entry_name, "");
             break;
 
         default:
@@ -676,17 +717,11 @@ int CombineObject(git_tree **new_root_tree,
         return rc;
     }
 
-    DBG("combine point oid:");
-    PrintOid(&old_combine_oid);
-
     // Recursively modify the tree, up till the root
     git_oid current_new_oid;
     git_tree *current_parent_tree;
     git_treebuilder *tree_builder;
     git_oid_cpy(&current_new_oid, combine_object_oid);
-
-    DBG("Current New Oid:");
-    PrintOid(&current_new_oid);
 
     if (combine_point_list.size() != tree_link_path.size()) {
         LOG("Unknown error in GitTreeSearch: combine_point_list_size = %ld, "
@@ -695,7 +730,6 @@ int CombineObject(git_tree **new_root_tree,
     }
 
     for (int i = combine_point_list.size() - 1; i >= 0; --i) {
-        DBG("Commit point path: %s", combine_point_list[i].c_str());
 
         // Find old tree entry
         current_parent_tree = tree_link_path[i];
@@ -721,9 +755,6 @@ int CombineObject(git_tree **new_root_tree,
         git_treebuilder_free(tree_builder);
     }
 
-    DBG("Current New Oid:");
-    PrintOid(&current_new_oid);
-
     // Return the final root tree
     rc = git_tree_lookup(new_root_tree, repo, &current_new_oid);
     if (rc < 0) {
@@ -738,6 +769,39 @@ int CombineObject(git_tree **new_root_tree,
 void UpdateAccessList(AccessList& list, GitTreeEntryName& entry_name)
 {
     list.AddUser(entry_name.user, entry_name.group);
+}
+
+size_t GitVCS::GetEncryptedContent(char **file_encrypted_content_ptr,
+        struct stat* source_stat,
+        const String& source_path,
+        const String& root_path) {
+    String key_content;
+    size_t file_encrypted_content_size;
+
+    // NOTE We do not need to specify a correct file name here because we
+    // only need the username and groupname.
+    GitTreeEntryName name("", source_stat);
+    key_content = access_manager_->GetGroupKey(name.user, name.group,
+            root_path);
+
+    // Read file_content
+    std::fstream fin(source_path.c_str());
+    std::stringstream oss;
+    oss << fin.rdbuf();
+    String file_content = oss.str();
+
+    // Init file_encrypted_content
+    // XXX Magic number
+    size_t file_encrypted_content_capacity = file_content.size() + 1024;
+    *file_encrypted_content_ptr = new char[file_encrypted_content_capacity];
+
+    //DBG("keycontent=%s", key_content.c_str());
+
+    file_encrypted_content_size = encryption_manager_->Encrypt(
+            *file_encrypted_content_ptr, file_content.c_str(),
+            file_content.size(), key_content, IV);
+
+    return file_encrypted_content_size;
 }
 
 // Create an object for the specific file in the path, recursively.
@@ -778,9 +842,6 @@ int GitVCS::CreateObjectRecursive(
 
     source_branch_name = GetBranch(relative_path);
 
-    DBG("path:%s, branch:%s, required branch:%s", relative_path.c_str(),
-            source_branch_name.c_str(), branch_name.c_str());
-
     if (source_stat == NULL) {
         source_stat = &source_stat_buf;
     }
@@ -813,46 +874,26 @@ int GitVCS::CreateObjectRecursive(
         }
 #endif
 
-        char *file_encrypted_content;
-        String key_content;
-        size_t file_encrypted_content_size;
+        if (NeedEncrypt(relative_path)) {
+            char *file_encrypted_content;
+            size_t file_encrypted_content_size;
 
-        // NOTE We do not need to specify a correct file name here because we
-        // only need the username and groupname.
-        GitTreeEntryName name("", source_stat);
-        key_content = access_manager_->GetGroupKey(name.user, name.group,
-                root_path);
+            file_encrypted_content_size = GetEncryptedContent(
+                    &file_encrypted_content, source_stat, source_path, root_path);
+            // Create a blob for the file
+            rc = git_blob_create_frombuffer(source_oid, repo, file_encrypted_content,
+                    file_encrypted_content_size);
 
-        // Read file_content
-        std::fstream fin(source_path.c_str());
-        std::stringstream oss;
-        oss << fin.rdbuf();
-        String file_content = oss.str();
-
-        // Init file_encrypted_content
-        // XXX Magic number
-        size_t file_encrypted_content_capacity = file_content.size() + 1024;
-        file_encrypted_content = new char[file_encrypted_content_capacity];
-
-        DBG("keycontent=%s", key_content.c_str());
-
-        file_encrypted_content_size = encryption_manager_->Encrypt(
-                file_encrypted_content, file_content.c_str(),
-                file_content.size(), key_content, IV);
-
-        // Create a blob for the file
-        rc = git_blob_create_frombuffer(source_oid, repo, file_encrypted_content,
-                file_encrypted_content_size);
-
-        delete[] file_encrypted_content;
+            delete[] file_encrypted_content;
+        } else {
+            //rc = git_blob_create_fromworkdir(source_oid, repo, relative_path.c_str());
+            rc = git_blob_create_fromdisk(source_oid, repo, source_path.c_str());
+        }
 
         if (rc < 0) {
             LOG("Cannot create a blob for file: %s", source_path.c_str());
             return rc;
         }
-
-        //DBG("Created blob, oid = ");
-        PrintOid(source_oid);
 
     } else if (S_ISDIR(source_stat->st_mode)) {
         DIR *directory = opendir(source_path.c_str());
@@ -882,7 +923,6 @@ int GitVCS::CreateObjectRecursive(
 
         while ((directory_entry = readdir(directory)) != NULL) {
             // Skip "." and ".."
-            //DBG("d_name = %s", directory_entry->d_name);
             if ((!strcmp(directory_entry->d_name, ".")) ||
                     (!strcmp(directory_entry->d_name, "..")))
                 continue;
@@ -930,7 +970,7 @@ int GitVCS::CreateObjectRecursive(
                     child_absolute_path.c_str(), child_relative_path.c_str(),
                     old_child_oid, old_access_list, IsIncluded, GetBranch);
             if (rc < 0) {
-                DBG("Failure in recursively create the object!");
+                LOG("Failure in recursively create the object!");
                 return rc;
             }
 
@@ -944,7 +984,6 @@ created:
                         tree_entry_name_str.c_str(), &child_oid, tree_entry_mode);
                 if (rc < 0) {
                     LOG("Cannot insert object into tree builder for file: %s, errno = %d", child_absolute_path.c_str(), rc);
-                    //DBG("tree entry name: %s", tree_entry_name_str.c_str());
                     return -1;
                 }
 
@@ -968,9 +1007,6 @@ created:
         // Free out the internal data
         git_treebuilder_free(tree_builder);
         closedir(directory);
-
-        //DBG("Created tree, oid = ");
-        PrintOid(source_oid);
 
     } else {
         // TODO Support symbolic link.
@@ -1171,9 +1207,6 @@ int GitVCS::Checkout(const String& repo_pathname,
         return rc;
     }
 
-    //DBG("Relative root is");
-    PrintOid(&relative_oid);
-
     // Step 4: Read access list
     rc = ReadAccessList(access_list, repo, commit_tree);
     if (rc < 0) {
@@ -1267,12 +1300,6 @@ int GitVCS::PartialCommit(const String& repo_pathname,
 
     old_commit_tree_id = git_tree_id(old_commit_tree);
 
-#ifdef DEBUG
-    //DBG("old commit tree: ");
-    PrintOid(git_tree_id(old_commit_tree));
-    PrintTree(old_commit_tree);
-#endif
-
     // Step 4: Get old access list
     rc = ReadAccessList(old_access_list, repo, old_commit_tree);
     if (rc < 0) {
@@ -1289,8 +1316,6 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     }
 
     new_access_list = old_access_list;
-    //DBG("old_access_list = %s", old_access_list.ToString().c_str());
-    //DBG("new_access_list = %s", new_access_list.ToString().c_str());
 
     rc = CreateObjectRecursive(&partial_oid, NULL, &new_access_list, repo, username_,
             branch_name, repo_pathname,  work_dir, relative_path,
@@ -1303,7 +1328,7 @@ int GitVCS::PartialCommit(const String& repo_pathname,
     }
 
     // Debug: print partial tree
-#ifdef DEBUG__
+#if 0
     git_tree *partial_tree;
     rc = git_tree_lookup(&partial_tree, repo, &partial_oid);
     if (rc < 0) {
@@ -1322,10 +1347,10 @@ int GitVCS::PartialCommit(const String& repo_pathname,
         return rc;
     }
 
-#ifdef DEBUG
-    //DBG("full commit tree: ");
-    //PrintOid(git_tree_id(new_commit_tree));
-    //PrintTree(new_commit_tree);
+#if 0
+    DBG("full commit tree: ");
+    PrintOid(git_tree_id(new_commit_tree));
+    PrintTree(new_commit_tree);
 #endif
 
     // Step 7: Create new access list
@@ -1350,7 +1375,6 @@ int GitVCS::PartialCommit(const String& repo_pathname,
 
     // Step 9: Get branch information
     const char *reference_name_c_str = git_reference_name(head_ref);
-    //DBG("old reference name: %s", reference_name_c_str);
 
     // Step 10: Create commit object
     if (CheckFastForward) {

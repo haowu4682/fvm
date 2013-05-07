@@ -112,6 +112,37 @@ int cmd_link(const Vector<String> &args)
     return 0;
 }
 
+int cmd_get_head(const Vector<String>& args)
+{
+    String head_id;
+    int rc;
+
+    if (args.size() < 2) {
+        printf("Usage: get-head repo_path [branch_name]\n");
+    }
+
+#if 0
+    DBG("size=%ld", args.size());
+    for (int i = 0; i < args.size(); ++i) {
+        DBG("args[%d]=%s", i, args[i].c_str());
+    }
+#endif
+
+    if (args.size() == 2) {
+        rc = vcs->GetHead(args[1], head_id);
+    } else {
+        rc = vcs->GetHead(args[1], args[2], head_id);
+    }
+
+    if (rc < 0) {
+        printf("Failed to retrieve the head id!\n");
+    } else {
+        printf("%s\n", head_id.c_str());
+    }
+
+    return 0;
+}
+
 int cmd_checkout(const Vector<String>& args)
 {
     // checkout repo_path commit_id relative_path
@@ -285,6 +316,7 @@ struct cmd_t fvm_commands[] = {
 //    { "trace-end", cmd_trace_end, "Start automatical tracing"},
     { "checkout", cmd_checkout, "Manually make a checkout"},
     { "commit", cmd_commit, "Manually make a commitment"},
+    { "get-head", cmd_get_head, "Get the head commit"},
 //    { "backtrace-start", cmd_repo_backtrace_start, "enter backtrace mode for a specific path"},
 //    { "backtrace-stop", cmd_repo_backtrace_stop, "exit backtrace mode for a specific path"},
     { "add-user", cmd_add_user, "Add a user to a group"},
@@ -389,6 +421,7 @@ int main(int argc, char **argv)
         std::cout << "fvm> ";
         command_args.clear();
         readline(std::cin, command_args);
+        command_args.pop_back();
         rc = handle_command(command_args);
 
         if (rc < 0) {

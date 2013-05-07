@@ -157,7 +157,7 @@ class GitVCS : public VersionControlSystem {
                 AccessList &access_list);
 
         int GitBlobWrite(git_repository *repo, git_blob *blob,
-                const String& destination, const GitTreeEntryName &name);
+                const String& destination, const GitTreeEntryName &name, const String& relative_path);
 
         int GitTreeWrite(git_repository *repo, git_tree *tree,
                 const String& destination,
@@ -166,6 +166,11 @@ class GitVCS : public VersionControlSystem {
         friend int GitTreeWriteCallback(const char *root,
                 const git_tree_entry *entry,
                 void *payload);
+
+        size_t GetEncryptedContent(char **file_encrypted_content_ptr,
+                struct stat* source_stat,
+                const String& source_path,
+                const String& root_path);
 
         int CreateObjectRecursive(
                 // Output
