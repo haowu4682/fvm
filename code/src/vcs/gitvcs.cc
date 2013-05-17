@@ -500,7 +500,7 @@ int GitVCS::GitBlobWrite(git_repository *repo, git_blob *blob,
     // Step 2: Decrypt
     char *new_buf;
     String path = relative_path + name.name;
-    DBG("path = %s", path.c_str());
+    //DBG("path = %s", path.c_str());
     if (NeedDecrypt(path)) {
         new_buf = new char[size + AES_BLOCK_SIZE];
         encryption_manager_->Decrypt(new_buf, (const char *)buf, size, group_key, IV);
@@ -509,8 +509,8 @@ int GitVCS::GitBlobWrite(git_repository *repo, git_blob *blob,
     }
 
     // Step 3: Write the content
-    DBG("destination=%s, relative_path=%s, name=%s, need_decrypt=%d", destination.c_str(),
-            relative_path.c_str(), name.name.c_str(), NeedDecrypt(relative_path));
+    //DBG("destination=%s, relative_path=%s, name=%s, need_decrypt=%d", destination.c_str(),
+    //        relative_path.c_str(), name.name.c_str(), NeedDecrypt(relative_path));
     FILE *file = fopen(destination.c_str(), "w");
     if (file == NULL) {
         LOG("Cannot open file to write: %s", destination.c_str());
@@ -604,15 +604,15 @@ int GitVCS::GitTreeWriteCallback(const char *root,
                 LOG("Error in git data structure: blob is not found.");
             }
 
-            DBG("name.user=%s, name.group=%s, name.name=%s",
-                    tree_entry_name.user.c_str(), tree_entry_name.group.c_str(),
-                    tree_entry_name.name.c_str());
+            //DBG("name.user=%s, name.group=%s, name.name=%s",
+            //        tree_entry_name.user.c_str(), tree_entry_name.group.c_str(),
+            //        tree_entry_name.name.c_str());
 
             group_key = access_manager_->GetGroupKey(tree_entry_name.user,
                     tree_entry_name.group, data->root_tree, data->repo);
 
             DBG("group_key=%s", group_key.c_str());
-            DBG("IV=%s", IV);
+            //DBG("IV=%s", IV);
 
             GitBlobWrite(data->repo, entry_blob, file_name, tree_entry_name,
                     root, group_key);

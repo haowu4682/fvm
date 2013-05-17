@@ -75,7 +75,7 @@ String AccessManager::GetGroupKey(const String& username,
     // Find the sub tree containing group keys
     const git_tree_entry *group_key_tree_entry =
         GitTreeEntrySearchByName(root_tree, group_key_dir);
-    DBG("Git Tree ID:");
+    //DBG("Git Tree ID:");
     PrintOid(git_tree_id(root_tree));
 
     if (group_key_tree_entry == NULL) {
