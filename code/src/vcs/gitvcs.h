@@ -157,13 +157,18 @@ class GitVCS : public VersionControlSystem {
                 AccessList &access_list);
 
         int GitBlobWrite(git_repository *repo, git_blob *blob,
-                const String& destination, const GitTreeEntryName &name, const String& relative_path);
+                const String& destination, const GitTreeEntryName &name,
+                const String& relative_path, const String& group_key);
 
         int GitTreeWrite(git_repository *repo, git_tree *tree,
                 const String& destination,
                 const String& username, AccessList &list);
 
-        friend int GitTreeWriteCallback(const char *root,
+        int GitTreeWriteCallback(const char *root,
+                const git_tree_entry *entry,
+                void *payload);
+
+        friend int GitTreeWriteCallbackWrapper(const char *root,
                 const git_tree_entry *entry,
                 void *payload);
 

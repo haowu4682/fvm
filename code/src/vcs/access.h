@@ -9,6 +9,9 @@
 #include <encrypt/encryptionmanager.h>
 #include <encrypt/keymanager.h>
 
+void PrintOid(const git_oid *oid);
+const git_tree_entry * GitTreeEntrySearchByName(git_tree *tree, const String& filename);
+
 class AccessManager {
     public:
 
@@ -36,6 +39,15 @@ class AccessManager {
         // @return TRUE if the user has the group key, FALSE otherwise.
         bool IsMember(const String& username, const String& groupname,
                 const String& root_path);
+
+        // Retrieve the group key
+        // @param username The user's name.
+        // @param groupname The group's name.
+        // @param root_tree The root tree of a commit
+        // @return The string containing the group key.
+        virtual String GetGroupKey(const String& username,
+                const String& groupname, git_tree* root_tree,
+                git_repository *repo);
 
         // Retrieve the group key
         // @param username The user's name.
@@ -71,6 +83,7 @@ class AccessManager {
         // Get the directory name containing the group keys.
         // @return The directory
         virtual String GetGroupKeyDir();
+        virtual String GetGroupKeyDirName();
 
     protected:
         KeyManager *key_manager_;

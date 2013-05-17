@@ -491,19 +491,13 @@ int GitTreeSearch(git_oid *relative_oid,
 
 int GitVCS::GitBlobWrite(git_repository *repo, git_blob *blob,
         const String& destination, const GitTreeEntryName &name,
-        const String& relative_path)
+        const String& relative_path, const String& group_key)
 {
     // Step 1: Read in blob content
     const void *buf = git_blob_rawcontent(blob);
     size_t size = git_blob_rawsize(blob);
 
-    // Step 2: Find group key
-    String group_key = access_manager_->GetGroupKey(name.user, name.group,
-            destination);
-
-    // Step 3: Decrypt
-    //DBG("group_key=%s", group_key.c_str());
-    //DBG("IV=%s", IV);
+    // Step 2: Decrypt
     char *new_buf;
     String path = relative_path + name.name;
     DBG("path = %s", path.c_str());
@@ -514,7 +508,7 @@ int GitVCS::GitBlobWrite(git_repository *repo, git_blob *blob,
         new_buf = (char *)buf;
     }
 
-    // Step 4: Write the content
+    // Step 3: Write the content
     DBG("destination=%s, relative_path=%s, name=%s, need_decrypt=%d", destination.c_str(),
             relative_path.c_str(), name.name.c_str(), NeedDecrypt(relative_path));
     FILE *file = fopen(destination.c_str(), "w");
@@ -535,6 +529,7 @@ int GitVCS::GitBlobWrite(git_repository *repo, git_blob *blob,
 
 struct GitTreeWriteCallbackPayload {
     git_repository *repo;
+    git_tree *root_tree;
     const String *destination;
     //    GitTreeEntryName info;
     AccessList *access_list;
@@ -560,8 +555,7 @@ String GetRealPath(const char *root)
     return os.str();
 }
 
-// TODO decrypt
-int GitTreeWriteCallback(const char *root,
+int GitVCS::GitTreeWriteCallback(const char *root,
         const git_tree_entry *entry,
         void *payload)
 {
@@ -572,7 +566,10 @@ int GitTreeWriteCallback(const char *root,
     // Step 1 Get FileTreeEntryName
     const char *entry_name_str = git_tree_entry_name(entry);
     GitTreeEntryName tree_entry_name;
-    tree_entry_name.FromString(entry_name_str);
+    rc = tree_entry_name.FromString(entry_name_str);
+    if (rc < 0) {
+        return 0;
+    }
 
     // Step 2 Check access permission
     if (!HasPermission(*data->username, kRead, tree_entry_name, *data->access_list)) {
@@ -592,6 +589,7 @@ int GitTreeWriteCallback(const char *root,
     git_otype entry_type = git_tree_entry_type(entry);
     const git_oid *entry_oid;
     git_blob *entry_blob;
+    String group_key;
 
     switch (entry_type) {
         case GIT_OBJ_TREE:
@@ -605,8 +603,19 @@ int GitTreeWriteCallback(const char *root,
             if (rc < 0) {
                 LOG("Error in git data structure: blob is not found.");
             }
-            data->vcs->GitBlobWrite(data->repo, entry_blob, file_name,
-                    tree_entry_name, root);
+
+            DBG("name.user=%s, name.group=%s, name.name=%s",
+                    tree_entry_name.user.c_str(), tree_entry_name.group.c_str(),
+                    tree_entry_name.name.c_str());
+
+            group_key = access_manager_->GetGroupKey(tree_entry_name.user,
+                    tree_entry_name.group, data->root_tree, data->repo);
+
+            DBG("group_key=%s", group_key.c_str());
+            DBG("IV=%s", IV);
+
+            GitBlobWrite(data->repo, entry_blob, file_name, tree_entry_name,
+                    root, group_key);
             break;
 
         default:
@@ -614,6 +623,16 @@ int GitTreeWriteCallback(const char *root,
     }
 
     return 0;
+}
+
+int GitTreeWriteCallbackWrapper(const char *root,
+        const git_tree_entry *entry,
+        void *payload)
+{
+    GitTreeWriteCallbackPayload *data =
+        static_cast<GitTreeWriteCallbackPayload *> (payload);
+
+    data->vcs->GitTreeWriteCallback(root, entry, payload);
 }
 
 int GitVCS::GitTreeWrite(git_repository *repo, git_tree *tree,
@@ -628,8 +647,10 @@ int GitVCS::GitTreeWrite(git_repository *repo, git_tree *tree,
     data.username = &username;
     data.access_list = &list;
     data.vcs = this;
+    // XXX Only works without partial checkout/commit
+    data.root_tree = tree;
 
-    rc = git_tree_walk(tree, GIT_TREEWALK_PRE, GitTreeWriteCallback, &data);
+    rc = git_tree_walk(tree, GIT_TREEWALK_PRE, GitTreeWriteCallbackWrapper, &data);
     if (rc < 0) {
         LOG("Cannot write the files into destination. Errorcode = %d", rc);
         return rc;
@@ -680,7 +701,7 @@ int GitVCS::GitObjectWrite(git_repository *repo,
             stat(destination.c_str(), &destination_stat);
             tree_entry_name.Init(destination, &destination_stat);
 
-            GitBlobWrite(repo, root_blob, destination, tree_entry_name, "");
+            GitBlobWrite(repo, root_blob, destination, tree_entry_name, "", "");
             break;
 
         default:

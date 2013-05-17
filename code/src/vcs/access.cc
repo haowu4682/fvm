@@ -12,11 +12,11 @@ bool AccessManager::IsMember(const String& username, const String& groupname,
     String group_key_filename = GetGroupKeyFilename(username, groupname);
     String group_key_dir = GetGroupKeyDir();
 
-    // XXX We may move the following steps to a higher level to make it a bit
-    // faster here.
     // Find the sub tree containing group keys
-    const git_tree_entry* group_key_tree_entry =
-        git_tree_entry_byname(root_tree, group_key_dir.c_str());
+    const git_tree_entry *group_key_tree_entry =
+        GitTreeEntrySearchByName(root_tree, group_key_dir);
+    //const git_tree_entry* group_key_tree_entry =
+    //    git_tree_entry_byname(root_tree, group_key_dir.c_str());
     if (group_key_tree_entry == NULL) {
         LOG("The group key dir does not exist!");
         // NOTE Return true anyway in this case because it means that the
@@ -36,8 +36,10 @@ bool AccessManager::IsMember(const String& username, const String& groupname,
     }
 
     // Check whether the group key exists
-    const git_tree_entry* group_key_entry =
-        git_tree_entry_byname(group_key_tree, group_key_filename.c_str());
+    //const git_tree_entry* group_key_entry =
+    //    git_tree_entry_byname(group_key_tree, group_key_filename.c_str());
+    const git_tree_entry *group_key_entry =
+        GitTreeEntrySearchByName(group_key_tree, group_key_filename);
     if (group_key_entry != NULL) {
         return true;
     }
@@ -60,6 +62,62 @@ bool AccessManager::IsMember(const String& username, const String& groupname,
     }
 
     return true;
+}
+
+String AccessManager::GetGroupKey(const String& username,
+        const String& groupname, git_tree* root_tree,
+        git_repository *repo)
+{
+    int rc;
+    String group_key_filename = GetGroupKeyFilename(username, groupname);
+    String group_key_dir = GetGroupKeyDirName();
+
+    // Find the sub tree containing group keys
+    const git_tree_entry *group_key_tree_entry =
+        GitTreeEntrySearchByName(root_tree, group_key_dir);
+    DBG("Git Tree ID:");
+    PrintOid(git_tree_id(root_tree));
+
+    if (group_key_tree_entry == NULL) {
+        LOG("The group key dir %s does not exist!", group_key_dir.c_str());
+        return "";
+    }
+
+    const git_oid* group_key_tree_id = git_tree_entry_id(group_key_tree_entry);
+    git_tree* group_key_tree;
+
+    rc = git_tree_lookup(&group_key_tree, repo, group_key_tree_id);
+    if (rc < 0) {
+        LOG("The group key dir is not a directory!");
+        // NOTE Return true anyway in this case because it means that the
+        // repository does not support group ownership managerment.
+        return "";
+    }
+
+    // Check whether the group key exists
+    //const git_tree_entry* group_key_entry =
+    //    git_tree_entry_byname(group_key_tree, group_key_filename.c_str());
+    const git_tree_entry *group_key_entry =
+        GitTreeEntrySearchByName(group_key_tree, group_key_filename);
+    if (group_key_entry == NULL) {
+        LOG("No group key exists!");
+        return "";
+    }
+
+    const git_oid* group_key_id = git_tree_entry_id(group_key_entry);
+    git_blob* group_key_blob;
+
+    rc = git_blob_lookup(&group_key_blob, repo, group_key_id);
+    if (rc < 0) {
+        LOG("The group key file is not a regular file!");
+        return "";
+    }
+
+    String key_encrypted_content((char *)git_blob_rawcontent(group_key_blob),
+            git_blob_rawsize(group_key_blob));
+    String key_content = key_manager_->GetGroupKeyContent(key_encrypted_content);
+
+    return key_content;
 }
 
 String AccessManager::GetGroupKey(const String& username,
@@ -98,6 +156,11 @@ String AccessManager::GetGroupKeyFilename(const String& username,
 String AccessManager::GetGroupKeyDir()
 {
     return ".groupkey/";
+}
+
+String AccessManager::GetGroupKeyDirName()
+{
+    return ".groupkey";
 }
 
 bool AccessManager::AddGroupKey(const String& old_username, const String& new_username,
