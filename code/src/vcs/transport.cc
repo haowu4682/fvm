@@ -1,4 +1,7 @@
 
+#include <iostream>
+#include <sstream>
+
 #include <vcs/gitvcs.h>
 
 /* Set progress and error callbacks */
@@ -84,25 +87,59 @@ int Ls(struct git_transport *transport,
     return 0;
 }
 
+#define TestAndWrite(channel, buf, size, msg) do { \
+        rc = ssh_channel_write(channel, buf, size); \
+        if (rc < 0) { \
+            LOG(msg); \
+            return -1; \
+        } \
+    } while (0)
+
+
+String GetHeader(git_push *push)
+{
+    int rc;
+    std::stringstream header_stream;
+    size_t spec_count;
+    git_push_spec* spec;
+    char buf[4000];
+
+    spec_count = git_push_refspec_count(push);
+    //object_count = git_push_object_count(push);
+
+    header_stream << "spec_count" << std::endl;
+
+    for (size_t i = 0; i < spec_count; ++i) {
+        spec = git_push_refspec_byindex(push, i);
+        git_pushspec_tobuffer(spec, buf, 4000);
+        header_stream << buf << std::endl;
+    }
+
+    return header_stream.str();
+}
+
 /* Executes the push whose context is in the git_push object. */
 int FVMTransport::Push(git_push *push)
 {
-    // XXX magic number
-    char buf[10000];
-
-    size_t size = git_push_tobuffer(buf, 10000, push);
     int rc;
+    // XXX Magic number
+    char buf[10000];
+    size_t spec_count, object_count;
+    git_push_spec* spec;
+//    git_pobject* object;
 
-    if (size < 0) {
-        LOG("retrieving push info fails!");
-        return -1;
-    }
+    // Retrieve information
+    String header = GetHeader(push);
 
-    rc = ssh_channel_write(channel, buf, size);
-    if (rc < 0) {
-        LOG("sending push info through SSH channel fails!");
-        return -1;
-    }
+    // Write header
+    // "nr_specs nr_objects\n"
+    //"spec1\n"
+    //"..."
+    //"specn\n"
+    TestAndWrite(channel, header.c_str(), header.size(), "Cannot write push package header!");
+
+    // Write objects
+    //"<size><buf_content>
 
     return 0;
 }
