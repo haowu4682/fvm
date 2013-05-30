@@ -88,7 +88,7 @@ int Ls(struct git_transport *transport,
 }
 
 #define TestAndWrite(channel, buf, size, msg) do { \
-        rc = ssh_channel_write(channel, buf, size); \
+        int rc = ssh_channel_write(channel, buf, size); \
         if (rc < 0) { \
             LOG(msg); \
             return -1; \
@@ -118,6 +118,13 @@ String GetHeader(git_push *push)
     return header_stream.str();
 }
 
+static int WriteObjectCallback(void *buf, size_t size, void *data)
+{
+    int rc;
+    ssh_channel *channel = static_cast<ssh_channel *>(data);
+    TestAndWrite(*channel, buf, size, "Failed to write object!");
+}
+
 /* Executes the push whose context is in the git_push object. */
 int FVMTransport::Push(git_push *push)
 {
@@ -126,7 +133,7 @@ int FVMTransport::Push(git_push *push)
     char buf[10000];
     size_t spec_count, object_count;
     git_push_spec* spec;
-//    git_pobject* object;
+    git_packbuilder* pb;
 
     // Retrieve information
     String header = GetHeader(push);
@@ -140,6 +147,8 @@ int FVMTransport::Push(git_push *push)
 
     // Write objects
     //"<size><buf_content>
+    pb = git_push_packbuilder(push);
+    git_packbuilder_foreach(pb, WriteObjectCallback, &channel);
 
     return 0;
 }
