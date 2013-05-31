@@ -1,4 +1,6 @@
 
+#include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 
@@ -122,6 +124,9 @@ static int WriteObjectCallback(void *buf, size_t size, void *data)
 {
     int rc;
     ssh_channel *channel = static_cast<ssh_channel *>(data);
+    char size_str_buf[100];
+    snprintf(size_str_buf, 100, "%ld\n", size);
+    TestAndWrite(*channel, size_str_buf, strlen(size_str_buf), "Failed to write object!");
     TestAndWrite(*channel, buf, size, "Failed to write object!");
 }
 
