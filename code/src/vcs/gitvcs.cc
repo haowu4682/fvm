@@ -537,7 +537,6 @@ struct GitTreeWriteCallbackPayload {
     GitVCS *vcs;
 };
 
-// TODO Remove replication
 String GetRealPath(const char *root)
 {
     std::ostringstream os;
@@ -1537,7 +1536,8 @@ int GitVCS::BranchCreate(const String& repo_name,
     return 0;
 }
 
-int GitVCS::SendPush(const String& repo_pathname, const String& remote_name)
+int GitVCS::SendPush(const String& repo_pathname, const String& remote_name,
+        int port)
 {
     int rc;
     git_push *push;
@@ -1557,9 +1557,9 @@ int GitVCS::SendPush(const String& repo_pathname, const String& remote_name)
         return rc;
     }
 
-    rc = git_remote_set_transport(remote, new FVMTransport());
+    rc = git_remote_set_transport(remote, new FVMTransport(username_, port));
     if (rc < 0) {
-        LOG("Failure: Cannot load remote config.");
+        LOG("Failure: Cannot set remote transport object.");
         return rc;
     }
 

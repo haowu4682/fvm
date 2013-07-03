@@ -302,6 +302,19 @@ int cmd_remove_user(const Vector<String> &args)
     return 0;
 }
 
+int cmd_push(const Vector<String> &args)
+{
+    if (args.size() < 3) {
+        printf("Usage: push repository_path remote_name port");
+        return -1;
+    }
+
+    int port(atoi(args[3].c_str()));
+
+    vcs->SendPush(args[1], args[2], port);
+    return 0;
+}
+
 struct cmd_t {
     const char *cmd;
     int (*fn) (const Vector<String>& /* args */);
@@ -319,6 +332,7 @@ struct cmd_t fvm_commands[] = {
     { "get-head", cmd_get_head, "Get the head commit"},
 //    { "backtrace-start", cmd_repo_backtrace_start, "enter backtrace mode for a specific path"},
 //    { "backtrace-stop", cmd_repo_backtrace_stop, "exit backtrace mode for a specific path"},
+    { "push", cmd_push, "Push a commit to remote side"},
     { "add-user", cmd_add_user, "Add a user to a group"},
     { "remove-user", cmd_remove_user, "Remove a user from a group"},
 

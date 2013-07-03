@@ -25,8 +25,6 @@ int FVMTransport::Connect(const char *url,
         int flags)
 {
     int rc;
-    String username;
-    // TODO Retract user name
 
     // Initialize session
     session = ssh_new();
@@ -36,8 +34,11 @@ int FVMTransport::Connect(const char *url,
 
     // Set options
     // TODO extract host and port from url
+    int verbosity = SSH_LOG_PROTOCOL;
     ssh_options_set(session, SSH_OPTIONS_HOST, "localhost");
-    ssh_options_set(session, SSH_OPTIONS_PORT, &port);
+    ssh_options_set(session, SSH_OPTIONS_PORT, &port_);
+    ssh_options_set(session, SSH_OPTIONS_USER, username_.c_str());
+    ssh_options_set(session, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 
     // Connect to the server
     rc = ssh_connect(session);
@@ -49,13 +50,13 @@ int FVMTransport::Connect(const char *url,
 
     // Authenticate
     // FVM requires the user to use PUBLIC_KEY authentication
-    rc = ssh_userauth_publickey_auto(session, username.c_str(), NULL);
+    rc = ssh_userauth_publickey_auto(session, NULL/*username.c_str()*/, NULL);
     if (rc == SSH_AUTH_ERROR) {
         LOG("Authentication failed: %s\n",
                 ssh_get_error(session));
         return rc;
     } else if (rc == SSH_AUTH_DENIED || rc == SSH_AUTH_PARTIAL) {
-        LOG("Authentication failed: %s\n",
+        LOG("Authentication denied: %s\n",
                 ssh_get_error(session));
         return rc;
     }
@@ -263,8 +264,10 @@ int FVMClose(struct git_transport *transport)
     return fvm_transport->Close();
 }
 
-FVMTransport::FVMTransport()
+FVMTransport::FVMTransport(const String& username, int port)
 {
+    username_ = username;
+    port_ = port;
     version = 1;
     is_connected_ = false;
 

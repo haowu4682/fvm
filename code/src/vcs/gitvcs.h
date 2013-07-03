@@ -34,7 +34,7 @@ struct GitTreeEntryName {
 
 class FVMTransport : public git_transport {
     public:
-        FVMTransport();
+        FVMTransport(const String& username, int port);
 
         int Connect(const char *url,
                 git_cred_acquire_cb cred_acquire_cb,
@@ -53,7 +53,8 @@ class FVMTransport : public git_transport {
     private:
         bool is_connected_;
 
-        int port;
+        String username_;
+        int port_;
 
         ssh_session session;
         ssh_channel channel;
@@ -118,7 +119,7 @@ class GitVCS : public VersionControlSystem {
                 const String& head_commit_id);
 
         // Create a push object, and push it to remote side
-        virtual int SendPush(const String& repo_pathname, const String& remote_name);
+        virtual int SendPush(const String& repo_pathname, const String& remote_name, int port);
 
         // Recieve a push object, and write the objects into the repository
         static int ReceivePush(git_push* push);
